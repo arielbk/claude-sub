@@ -22,3 +22,21 @@
 - The real-claude-resolver uses `realpathSync(process.argv[1])` as the shim identity, so it works correctly whether invoked directly (`node dist/shim.js`) or via a global PATH symlink
 
 ---
+
+## [opt-in-branch-with-flag-mapping] 2026-05-17
+
+**Status:** done
+
+**What was implemented:**
+- `src/flag-mapper.ts` — parses `claude -p` args: extracts prompt from `-p "value"` / `--print "value"` / positional arg forms; validates flags against an allowlist; rejects unsupported flags (`--output-format`, `--resume`, `--json`, `--no-markdown`, unknown `--` flags) with a clear error naming the offending flag and listing supported flags (`--model`/`-m`, `--verbose`/`-v`)
+- `src/__tests__/flag-mapper.test.ts` — 12 unit tests covering: each supported flag accepted and forwarded, each unsupported flag rejected with correct error content, prompt extraction from `-p` value, `--print` value, and positional arg forms
+- Updated `src/shim.ts` — branches on `CLAUDE_USE_PLAN=1` AND `-p`/`--print` present: calls `parseArgs`, exits non-zero with stderr on failure, prints stub reply on success (stub replaced in pty-roundtrip-raw)
+- Updated `src/__tests__/shim.test.ts` — 4 new integration tests: stub output when valid flags given, non-zero exit + stderr containing flag name and supported list for unsupported flag, passthrough when `CLAUDE_USE_PLAN` unset, passthrough when `CLAUDE_USE_PLAN=1` but no `-p`
+
+**Feedback loop result:** `tsc` clean; 18 vitest tests pass (12 unit + 6 integration including existing passthrough tests).
+
+**Notes:**
+- `parseArgs` treats any unknown `--` flag as unsupported; this is intentional since the allowed set for PTY mode is narrow
+- Stub output (`[plan-mode stub] prompt: …`) will be replaced wholesale in `pty-roundtrip-raw`
+
+---

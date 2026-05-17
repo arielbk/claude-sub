@@ -26,7 +26,7 @@ Slices will be executed via `/ralph`, which spawns each iteration inside a Docke
 
 ### `opt-in-branch-with-flag-mapping` — Opt-in detection + flag allowlist
 
-**Status:** not-started
+**Status:** done
 
 **Outside-in:** `CLAUDE_USE_PLAN=1 claude -p "hello"` with a supported flag set (e.g. `--model sonnet`) prints a stub reply on stdout and exits 0. Passing an unsupported flag (e.g. `--output-format json`) exits non-zero with a clear stderr message naming the unsupported flag and listing the supported set. With `CLAUDE_USE_PLAN` unset, behavior is identical to slice 1's passthrough regardless of `-p`.
 
