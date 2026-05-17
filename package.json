@@ -6,7 +6,7 @@
   "main": "./dist/shim.js",
   "bin": {
     "claude": "./dist/shim.js",
-    "csub": "./dist/shim.js"
+    "csub": "./dist/csub.js"
   },
   "files": [
     "dist/**/*.js",

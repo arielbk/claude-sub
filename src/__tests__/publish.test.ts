@@ -50,7 +50,7 @@ describe("publish-prep", () => {
     );
     expect(pkg.bin).toBeDefined();
     expect(pkg.bin.claude).toMatch(/dist\/shim\.js/);
-    expect(pkg.bin.csub).toMatch(/dist\/shim\.js/);
+    expect(pkg.bin.csub).toMatch(/dist\/csub\.js/);
   });
 
   it("package.json declares name as claude-sub", () => {

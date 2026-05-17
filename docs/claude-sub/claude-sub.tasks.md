@@ -48,7 +48,7 @@ Wrap the existing `claude -p` PTY shim with a file-based on/off switch and a one
 
 ### `cli-on-off-status` — csub on/off/status
 
-**Status:** not-started
+**Status:** done
 
 **Outside-in:** `csub on` writes `enabled: true` and exits 0; `csub off` writes `enabled: false` and exits 0; `csub status` prints on/off, state file path, and "intercepted N calls" and exits 0.
 

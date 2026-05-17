@@ -51,3 +51,24 @@
 
 - 5 new tests in `shim.test.ts` all pass.
 - Total: 51 passed, 3 pre-existing failures unchanged (node-pty native module / real claude path issues in integration tests).
+
+---
+
+## cli-on-off-status — 2026-05-17
+
+**Slice:** `cli-on-off-status`
+**Status:** done
+
+### What changed
+
+- `src/cli.ts`: new module exporting `cmdOn()`, `cmdOff()`, `cmdStatus()`. Each returns `{ exitCode: number, output?: string }`. `cmdOn`/`cmdOff` call `writeState({ enabled: true/false })`. `cmdStatus` calls `readState()` and `stateFilePath()` and formats output as "Status: on/off", "State file: <path>", "Intercepted N calls".
+- `src/csub.ts`: new entry point (`#!/usr/bin/env node`) that parses `process.argv[2]` as subcommand, dispatches to handlers, writes output to stdout, and exits with the returned exit code. Unknown commands print usage to stderr and exit 1.
+- `package.json`: updated `"csub"` bin entry from `"./dist/shim.js"` to `"./dist/csub.js"`.
+- `src/__tests__/cli.test.ts`: 9 unit tests covering: `cmdOn` writes `enabled: true` and returns exit code 0; `cmdOff` writes `enabled: false` and returns exit code 0; `cmdStatus` with `enabled: true` outputs "on"; `cmdStatus` with `enabled: false` outputs "off"; output includes state file path; output includes intercept count; exit code 0.
+- `src/__tests__/publish.test.ts`: updated `csub` bin assertion from `/dist\/shim\.js/` to `/dist\/csub\.js/` to reflect the new entry point.
+
+### Test results
+
+- `cli.test.ts`: 9/9 pass (new).
+- `publish.test.ts`: 11/11 pass (updated csub bin assertion).
+- Total: 60 passed, 3 pre-existing failures unchanged (node-pty native module / real claude path issues in integration tests).
