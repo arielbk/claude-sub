@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { cmdOn, cmdOff, cmdStatus } from "./cli.js";
+import { cmdOn, cmdOff, cmdStatus, cmdDoctor } from "./cli.js";
 
 const [, , cmd, ...rest] = process.argv;
 
@@ -16,8 +16,10 @@ if (cmd === "on") {
   result = await cmdOff();
 } else if (cmd === "status") {
   result = await cmdStatus();
+} else if (cmd === "doctor") {
+  result = await cmdDoctor();
 } else {
-  process.stderr.write(`csub: unknown command: ${cmd ?? "(none)"}\nUsage: csub on|off|status\n`);
+  process.stderr.write(`csub: unknown command: ${cmd ?? "(none)"}\nUsage: csub on|off|status|doctor\n`);
   process.exit(1);
 }
 

@@ -6,11 +6,23 @@ vi.mock("../state.js", () => ({
   stateFilePath: vi.fn(),
 }));
 
+vi.mock("../doctor.js", () => ({
+  runDoctor: vi.fn(),
+  analyzePaths: vi.fn(),
+  isShimBinary: vi.fn(),
+  getClaudePaths: vi.fn(),
+}));
+
 import { writeState, readState, stateFilePath } from "../state.js";
+import { runDoctor } from "../doctor.js";
 import { cmdOn, cmdOff, cmdStatus } from "../cli.js";
 
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(runDoctor).mockResolvedValue({
+    ok: true,
+    message: "OK — shim is first on PATH",
+  });
 });
 
 describe("cmdOn", () => {

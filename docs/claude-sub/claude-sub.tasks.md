@@ -62,7 +62,7 @@ Wrap the existing `claude -p` PTY shim with a file-based on/off switch and a one
 
 ### `cli-doctor` — csub doctor
 
-**Status:** not-started
+**Status:** done
 
 **Outside-in:** `csub doctor` exits 0 when the shim wins on PATH and the real claude is discoverable behind it; exits non-zero with a remediation message (including the exact `export PATH=...` line) otherwise. `csub on` also runs the doctor and reports inline.
 

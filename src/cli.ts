@@ -1,4 +1,6 @@
 import { readState, writeState, stateFilePath } from "./state.js";
+import { runDoctor } from "./doctor.js";
+export type { DiagnosticResult } from "./doctor.js";
 
 export interface CommandResult {
   exitCode: number;
@@ -7,7 +9,10 @@ export interface CommandResult {
 
 export async function cmdOn(): Promise<CommandResult> {
   await writeState({ enabled: true });
-  return { exitCode: 0 };
+  const diag = await runDoctor();
+  const doctorLines = [diag.message];
+  if (diag.remediation) doctorLines.push(diag.remediation);
+  return { exitCode: 0, output: doctorLines.join("\n") };
 }
 
 export async function cmdOff(): Promise<CommandResult> {
@@ -25,4 +30,14 @@ export async function cmdStatus(): Promise<CommandResult & { output: string }> {
     `Intercepted ${state.interceptCount} calls`,
   ].join("\n");
   return { exitCode: 0, output };
+}
+
+export async function cmdDoctor(): Promise<CommandResult> {
+  const result = await runDoctor();
+  const lines: string[] = [result.message];
+  if (result.remediation) lines.push(result.remediation);
+  return {
+    exitCode: result.ok ? 0 : 1,
+    output: lines.join("\n"),
+  };
 }

@@ -72,3 +72,24 @@
 - `cli.test.ts`: 9/9 pass (new).
 - `publish.test.ts`: 11/11 pass (updated csub bin assertion).
 - Total: 60 passed, 3 pre-existing failures unchanged (node-pty native module / real claude path issues in integration tests).
+
+---
+
+## cli-doctor — 2026-05-17
+
+**Slice:** `cli-doctor`
+**Status:** done
+
+### What changed
+
+- `src/doctor.ts`: new module exporting `isShimBinary(path)`, `analyzePaths(paths, shimChecker?)`, `getClaudePaths()`, and `runDoctor()`. `analyzePaths` is a pure function (shimChecker defaults to `isShimBinary`) covering four cases: missing entirely, shim-only, real-only, real-first (returns remediation `export PATH="<shim-dir>:$PATH"`), and shim-first (ok). `getClaudePaths` shells out to `which -a claude`.
+- `src/cli.ts`: imported `runDoctor` from `./doctor.js`; updated `cmdOn()` to call `runDoctor()` and include doctor output inline; added `cmdDoctor()` handler (placed in cli.ts rather than doctor.ts to allow clean cross-module mock in tests).
+- `src/csub.ts`: added `doctor` subcommand dispatch; updated usage string to `csub on|off|status|doctor`.
+- `src/__tests__/doctor.test.ts`: 9 unit tests: 5 for `analyzePaths` (shim-first, real-first, missing, shim-only, real-only), 2 for `cmdDoctor` (exit code 0 on ok, exit code 1 with remediation on failure), 2 for `cmdOn` with doctor integration (message included, remediation included).
+- `src/__tests__/cli.test.ts`: added `vi.mock("../doctor.js")` with `runDoctor: vi.fn()` default returning ok; seeded default mock in `beforeEach` so existing `cmdOn` tests stay fast and environment-independent.
+
+### Test results
+
+- `doctor.test.ts`: 9/9 pass (new).
+- `cli.test.ts`: 9/9 pass (mock added, no behavioural change).
+- Total: 69 passed, 3 pre-existing failures unchanged (node-pty native module / real claude path issues in integration tests).
