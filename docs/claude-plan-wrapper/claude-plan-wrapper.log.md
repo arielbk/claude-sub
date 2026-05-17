@@ -60,3 +60,23 @@
 - Raw PTY output includes ANSI escapes and TUI chrome; `OK` is present in the stream, satisfying the slice's outside-in requirement
 
 ---
+
+## [sentinel-and-clean-extraction] 2026-05-17
+
+**Status:** done
+
+**What was implemented:**
+- `src/output-extractor.ts` — exports `SENTINEL` (`__PLAN_MODE_DONE_7a3b9f__`), `SENTINEL_SYSTEM_PROMPT` (the `--append-system-prompt` instruction Claude will receive), `stripAnsi(raw)` (strips ANSI/VT escape sequences and normalises `\r\n`/`\r` to `\n`), and `extractReply(raw)` (finds sentinel line, returns cleaned text before it with trailing whitespace stripped; returns `found:false` with clean text if sentinel absent)
+- `src/__tests__/output-extractor.test.ts` — 12 unit tests covering: plain text passthrough, SGR strip, cursor-movement strip, `\r\n`/`\r` normalisation, clean reply with sentinel, sentinel split across chunks (accumulated buffer), ANSI interleaved with content, trailing whitespace stripped, sentinel-prefix substring not matching full token, no-sentinel case, multi-line reply
+- Updated `src/pty-runner.ts` — prepends `["--append-system-prompt", SENTINEL_SYSTEM_PROMPT]` to spawn args; terminates the PTY early when `rawOutput.includes(SENTINEL)`; `PtyRunResult` gains a `reply` field (result of `extractReply(rawOutput).reply`)
+- Updated `src/shim.ts` — writes `reply + "\n"` to stdout instead of `rawOutput`, so callers receive clean text
+- Updated `src/__tests__/pty-runner.e2e.test.ts` — E2E test now asserts: no ANSI in stdout, no sentinel token in stdout, `stdout.trim() === "OK"`
+
+**Feedback loop result:** `tsc` clean; 29 vitest tests pass, 2 E2E-gated tests skipped (require `CLAUDE_USE_PLAN_E2E=1`).
+
+**Notes:**
+- Sentinel-based early termination supersedes the settle heuristic for happy-path responses; settle still acts as a fallback if Claude doesn't emit the sentinel
+- `--append-system-prompt` is a real `claude` CLI flag; it injects an extra system prompt suffix without modifying the user's configured system prompt
+- The `extractReply` sentinel scan operates on the fully accumulated PTY buffer, so "split across chunks" is handled naturally by the caller accumulating before calling the function
+
+---

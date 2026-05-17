@@ -56,7 +56,7 @@ Slices will be executed via `/ralph`, which spawns each iteration inside a Docke
 
 ### `sentinel-and-clean-extraction` — Sentinel injection + clean output extractor
 
-**Status:** not-started
+**Status:** done
 
 **Outside-in:** `CLAUDE_USE_PLAN=1 claude -p "reply with the single word OK"` prints exactly `OK\n` to stdout — no ANSI escapes, no TUI chrome, no sentinel token, no trailing whitespace beyond a single terminating newline. The spawned interactive Claude is started with `--append-system-prompt` carrying the sentinel instruction; the extractor watches the byte stream, strips ANSI, detects the sentinel token on its own line, and returns the cleaned reply.
 

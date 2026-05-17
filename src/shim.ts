@@ -16,11 +16,11 @@ if (usePlan && hasPrintFlag) {
   }
 
   try {
-    const { rawOutput, exitCode } = await runUnderPty(
+    const { reply, exitCode } = await runUnderPty(
       parsed.prompt,
       parsed.passthroughArgs
     );
-    process.stdout.write(rawOutput);
+    process.stdout.write(reply + "\n");
     process.exit(exitCode);
   } catch (err) {
     process.stderr.write(`claude-plan-wrapper: PTY error: ${err}\n`);

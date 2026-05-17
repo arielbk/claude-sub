@@ -1,8 +1,10 @@
 import * as pty from "node-pty";
 import { resolveRealClaude } from "./real-claude-resolver.js";
+import { SENTINEL, SENTINEL_SYSTEM_PROMPT, extractReply } from "./output-extractor.js";
 
 export interface PtyRunResult {
   rawOutput: string;
+  reply: string;
   exitCode: number;
 }
 
@@ -39,7 +41,13 @@ export async function runUnderPty(
     let settleTimer: ReturnType<typeof setTimeout> | null = null;
     let maxTimer: ReturnType<typeof setTimeout> | null = null;
 
-    const ptyProcess = pty.spawn(realClaude, passthroughArgs, {
+    const spawnArgs = [
+      "--append-system-prompt",
+      SENTINEL_SYSTEM_PROMPT,
+      ...passthroughArgs,
+    ];
+
+    const ptyProcess = pty.spawn(realClaude, spawnArgs, {
       name: "xterm-256color",
       cols: 200,
       rows: 50,
@@ -52,7 +60,8 @@ export async function runUnderPty(
       done = true;
       if (settleTimer) clearTimeout(settleTimer);
       if (maxTimer) clearTimeout(maxTimer);
-      resolve({ rawOutput, exitCode });
+      const { reply } = extractReply(rawOutput);
+      resolve({ rawOutput, reply, exitCode });
     };
 
     const terminate = () => {
@@ -87,6 +96,10 @@ export async function runUnderPty(
       // Only run settle logic after prompt has been sent
       if (settleTimer !== null) {
         resetSettle();
+      }
+      // Terminate early once sentinel is present in the accumulated stream
+      if (settleTimer !== null && rawOutput.includes(SENTINEL)) {
+        terminate();
       }
     });
 
