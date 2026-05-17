@@ -86,7 +86,7 @@ Slices will be executed via `/ralph`, which spawns each iteration inside a Docke
 
 ### `publish-prep` — Publish prep: README, bin, packaged install
 
-**Status:** not-started
+**Status:** done
 
 **Outside-in:** `pnpm pack` produces a tarball; `pnpm add -g ./<tarball>` in a fresh directory installs a `claude` binary on PATH; `CLAUDE_USE_PLAN=1 claude -p "reply with the single word OK"` works end-to-end against the user's real Claude install. README documents: install steps, `PATH` ordering requirement, `CLAUDE_USE_PLAN` opt-in semantics, supported flag allowlist, and known limitations (no JSON output, no `--resume`, etc.).
 

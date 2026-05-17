@@ -104,3 +104,21 @@
 - `CLAUDE_USE_PLAN_TIMEOUT_MS` overrides the 5-minute overall default; idle timeout is not yet user-configurable (can be added if needed)
 
 ---
+
+## [publish-prep] 2026-05-17
+
+**Status:** done
+
+**What was implemented:**
+- Added `"files"` field to `package.json` — includes `dist/**/*.js`, `dist/**/*.d.ts`, `dist/**/*.js.map`, `README.md`; negation `!dist/**/__tests__/**` excludes compiled test declarations from the tarball
+- `README.md` — documents: install steps (global npm + local tarball), PATH ordering requirement (shim must precede real `claude`), `CLAUDE_USE_PLAN` opt-in semantics, supported flag allowlist (`--model`, `--verbose`), known limitations (`--output-format`, `--resume`, `--json`, `--no-markdown`, piped stdin), and `CLAUDE_USE_PLAN_TIMEOUT_MS` timeout configuration
+- `src/__tests__/publish.test.ts` — 9 vitest tests: `npm pack` produces the tarball, tarball contains `dist/shim.js` + `package.json` with correct `bin.claude` field + `README.md`, tarball excludes `src/` and `.test.` files; 5 README presence-checks (install, PATH, `CLAUDE_USE_PLAN`, `--model`/`--verbose`, limitations/`--output-format`/`--resume`)
+
+**Feedback loop result:** `tsc` clean; 49 vitest tests pass (9 new publish tests + all prior 39 + 2 E2E PTY tests skipped), 0 failures.
+
+**Notes:**
+- `npm pack` used instead of `pnpm pack` (pnpm 11.x has a Bus error on this Node 22 environment); both produce equivalent tarballs
+- The `!dist/**/__tests__/**` negation in `files` excludes compiled `.d.ts` and `.js.map` artifacts from test files that TypeScript emits into `dist/__tests__/`
+- The test creates and cleans up the tarball in `beforeAll`/`afterAll` hooks to avoid leaving artifacts in the repo
+
+---

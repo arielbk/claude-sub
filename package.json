@@ -7,6 +7,13 @@
   "bin": {
     "claude": "./dist/shim.js"
   },
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.d.ts",
+    "dist/**/*.js.map",
+    "!dist/**/__tests__/**",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
