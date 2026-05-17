@@ -43,20 +43,26 @@ describe("shim passthrough", () => {
   });
 });
 
+const isE2E = process.env.CLAUDE_USE_PLAN_E2E === "1";
+
 describe("shim plan-mode branch (CLAUDE_USE_PLAN=1)", () => {
-  it("exits 0 and emits stub output when -p is given with supported flags", () => {
-    const result = spawnSync(
-      "node",
-      [shimBin, "-p", "hello", "--model", "sonnet"],
-      {
-        encoding: "utf8",
-        timeout: 15000,
-        env: { ...process.env, CLAUDE_USE_PLAN: "1" },
-      }
-    );
-    expect(result.status).toBe(0);
-    expect(result.stdout).toContain("hello");
-  });
+  it.skipIf(!isE2E)(
+    "exits 0 and produces output when -p is given with supported flags",
+    () => {
+      const result = spawnSync(
+        "node",
+        [shimBin, "-p", "reply with the single word HELLO", "--model", "sonnet"],
+        {
+          encoding: "utf8",
+          timeout: 120000,
+          env: { ...process.env, CLAUDE_USE_PLAN: "1" },
+        }
+      );
+      expect(result.status).toBe(0);
+      expect(result.stdout.length).toBeGreaterThan(0);
+    },
+    120000
+  );
 
   it("exits non-zero with stderr message when unsupported flag is given", () => {
     const result = spawnSync(

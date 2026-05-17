@@ -2,6 +2,7 @@
 import { spawnSync } from "node:child_process";
 import { resolveRealClaude } from "./real-claude-resolver.js";
 import { parseArgs } from "./flag-mapper.js";
+import { runUnderPty } from "./pty-runner.js";
 
 const args = process.argv.slice(2);
 const usePlan = process.env.CLAUDE_USE_PLAN === "1";
@@ -14,9 +15,17 @@ if (usePlan && hasPrintFlag) {
     process.exit(1);
   }
 
-  // Stub output: replaced by actual PTY invocation in pty-roundtrip-raw slice
-  process.stdout.write(`[plan-mode stub] prompt: ${parsed.prompt}\n`);
-  process.exit(0);
+  try {
+    const { rawOutput, exitCode } = await runUnderPty(
+      parsed.prompt,
+      parsed.passthroughArgs
+    );
+    process.stdout.write(rawOutput);
+    process.exit(exitCode);
+  } catch (err) {
+    process.stderr.write(`claude-plan-wrapper: PTY error: ${err}\n`);
+    process.exit(1);
+  }
 }
 
 const realClaude = resolveRealClaude();

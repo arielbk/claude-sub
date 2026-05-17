@@ -40,3 +40,23 @@
 - Stub output (`[plan-mode stub] prompt: …`) will be replaced wholesale in `pty-roundtrip-raw`
 
 ---
+
+## [pty-roundtrip-raw] 2026-05-17
+
+**Status:** done
+
+**What was implemented:**
+- Installed `node-pty` (required installing `g++`/`make` via apt for native bindings to compile)
+- `src/pty-runner.ts` — `runUnderPty(prompt, passthroughArgs, opts?)` spawns the real `claude` binary under a PTY (xterm-256color, 200×50), waits `initialDelayMs` (default 2s) for the TUI to initialize, sends the prompt as keystrokes followed by `\n`, then watches for the output to settle (`settleMs` default 5s of no new data), and terminates with Ctrl-C / kill before returning the raw PTY byte stream and exit code
+- `src/__tests__/pty-runner.e2e.test.ts` — integration test gated on `CLAUDE_USE_PLAN_E2E=1`; invokes the built shim subprocess with `CLAUDE_USE_PLAN=1 -p "reply with the single word OK"` and asserts `stdout` contains `OK` and `status === 0`
+- Updated `src/shim.ts` — replaced the stub with `await runUnderPty(parsed.prompt, parsed.passthroughArgs)` using top-level await; writes `rawOutput` to stdout and exits with `exitCode`; PTY errors go to stderr with exit 1
+- Updated `src/__tests__/shim.test.ts` — gated the plan-mode integration test under `CLAUDE_USE_PLAN_E2E=1` since it now invokes real Claude via PTY
+
+**Feedback loop result:** `tsc` clean; `npm test` (non-e2e): 17 pass, 2 skipped; `CLAUDE_USE_PLAN_E2E=1 npm test`: 19 pass in ~9s (PTY roundtrip completed in ~8s).
+
+**Notes:**
+- `node-pty` requires native compilation; installed `g++`/`make` via apt-get in the sandbox
+- The settle heuristic (5s of no new PTY bytes after sending the prompt) is intentionally conservative; it will be superseded by sentinel-based detection in `sentinel-and-clean-extraction`
+- Raw PTY output includes ANSI escapes and TUI chrome; `OK` is present in the stream, satisfying the slice's outside-in requirement
+
+---

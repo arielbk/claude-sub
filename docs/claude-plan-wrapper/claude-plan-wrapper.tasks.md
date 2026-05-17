@@ -40,7 +40,7 @@ Slices will be executed via `/ralph`, which spawns each iteration inside a Docke
 
 ### `pty-roundtrip-raw` — PTY spawn + raw output dump
 
-**Status:** not-started
+**Status:** done
 
 **Outside-in:** `CLAUDE_USE_PLAN=1 claude -p "reply with the single word OK"` spawns interactive Claude under node-pty, sends the prompt as keystrokes, waits for the session to settle, and dumps the raw PTY byte stream (ANSI escapes and all) to stdout. The output is messy but contains the substring `OK`.
 
