@@ -19,7 +19,7 @@ describe("shim passthrough", () => {
       timeout: 15000,
       env: {
         ...process.env,
-        CLAUDE_USE_PLAN: undefined,
+        CLAUDE_USE_SUB: undefined,
       },
     });
 
@@ -32,20 +32,20 @@ describe("shim passthrough", () => {
     expect(shimResult.stdout).toBe(realResult.stdout);
   });
 
-  it("CLAUDE_USE_PLAN unset: shim passes through -p without plan-mode", () => {
+  it("CLAUDE_USE_SUB unset: shim passes through -p without plan-mode", () => {
     const result = spawnSync("node", [shimBin, "--help"], {
       encoding: "utf8",
       timeout: 15000,
-      env: { ...process.env, CLAUDE_USE_PLAN: undefined },
+      env: { ...process.env, CLAUDE_USE_SUB: undefined },
     });
     // Passthrough: output should not contain the stub marker
     expect(result.stdout).not.toContain("[plan-mode stub]");
   });
 });
 
-const isE2E = process.env.CLAUDE_USE_PLAN_E2E === "1";
+const isE2E = process.env.CLAUDE_USE_SUB_E2E === "1";
 
-describe("shim plan-mode branch (CLAUDE_USE_PLAN=1)", () => {
+describe("shim plan-mode branch (CLAUDE_USE_SUB=1)", () => {
   it.skipIf(!isE2E)(
     "exits 0 and produces output when -p is given with supported flags",
     () => {
@@ -55,7 +55,7 @@ describe("shim plan-mode branch (CLAUDE_USE_PLAN=1)", () => {
         {
           encoding: "utf8",
           timeout: 120000,
-          env: { ...process.env, CLAUDE_USE_PLAN: "1" },
+          env: { ...process.env, CLAUDE_USE_SUB: "1" },
         }
       );
       expect(result.status).toBe(0);
@@ -71,7 +71,7 @@ describe("shim plan-mode branch (CLAUDE_USE_PLAN=1)", () => {
       {
         encoding: "utf8",
         timeout: 15000,
-        env: { ...process.env, CLAUDE_USE_PLAN: "1" },
+        env: { ...process.env, CLAUDE_USE_SUB: "1" },
       }
     );
     expect(result.status).not.toBe(0);
@@ -79,11 +79,11 @@ describe("shim plan-mode branch (CLAUDE_USE_PLAN=1)", () => {
     expect(result.stderr).toContain("--model");
   });
 
-  it("CLAUDE_USE_PLAN=1 without -p passes through to real claude", () => {
+  it("CLAUDE_USE_SUB=1 without -p passes through to real claude", () => {
     const shimResult = spawnSync("node", [shimBin, "--help"], {
       encoding: "utf8",
       timeout: 15000,
-      env: { ...process.env, CLAUDE_USE_PLAN: "1" },
+      env: { ...process.env, CLAUDE_USE_SUB: "1" },
     });
     const realResult = spawnSync(realClaude, ["--help"], {
       encoding: "utf8",

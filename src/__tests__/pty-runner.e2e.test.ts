@@ -6,11 +6,11 @@ import { fileURLToPath } from "node:url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const shimBin = resolve(__dirname, "../../dist/shim.js");
 
-const isE2E = process.env.CLAUDE_USE_PLAN_E2E === "1";
+const isE2E = process.env.CLAUDE_USE_SUB_E2E === "1";
 
 describe.skipIf(!isE2E)("sentinel-and-clean-extraction e2e", () => {
   it(
-    'shim with CLAUDE_USE_PLAN=1 -p "reply with the single word OK" outputs exactly OK\\n',
+    'shim with CLAUDE_USE_SUB=1 -p "reply with the single word OK" outputs exactly OK\\n',
     () => {
       const result = spawnSync(
         "node",
@@ -18,7 +18,7 @@ describe.skipIf(!isE2E)("sentinel-and-clean-extraction e2e", () => {
         {
           encoding: "utf8",
           timeout: 120000,
-          env: { ...process.env, CLAUDE_USE_PLAN: "1" },
+          env: { ...process.env, CLAUDE_USE_SUB: "1" },
         }
       );
       expect(result.status).toBe(0);

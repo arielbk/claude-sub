@@ -1,7 +1,7 @@
 {
   "name": "claude-plan-wrapper",
   "version": "0.1.0",
-  "description": "PATH shim that routes claude -p invocations through interactive Claude when CLAUDE_USE_PLAN=1",
+  "description": "PATH shim that routes claude -p invocations through interactive Claude when CLAUDE_USE_SUB=1",
   "type": "module",
   "main": "./dist/shim.js",
   "bin": {
@@ -17,7 +17,7 @@
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
-    "test:e2e": "CLAUDE_USE_PLAN_E2E=1 vitest run --reporter=verbose"
+    "test:e2e": "CLAUDE_USE_SUB_E2E=1 vitest run --reporter=verbose"
   },
   "keywords": [],
   "author": "",

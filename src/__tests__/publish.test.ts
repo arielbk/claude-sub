@@ -85,8 +85,8 @@ describe("publish-prep", () => {
       expect(readme).toMatch(/PATH/);
     });
 
-    it("documents CLAUDE_USE_PLAN opt-in semantics", () => {
-      expect(readme).toMatch(/CLAUDE_USE_PLAN/);
+    it("documents CLAUDE_USE_SUB opt-in semantics", () => {
+      expect(readme).toMatch(/CLAUDE_USE_SUB/);
     });
 
     it("documents supported flag allowlist", () => {

@@ -6,7 +6,7 @@ import { runUnderPty } from "./pty-runner.js";
 import { formatDiagnostic } from "./diagnostic-formatter.js";
 
 const args = process.argv.slice(2);
-const usePlan = process.env.CLAUDE_USE_PLAN === "1";
+const usePlan = process.env.CLAUDE_USE_SUB === "1";
 const hasPrintFlag = args.some((a) => a === "-p" || a === "--print");
 
 if (usePlan && hasPrintFlag) {
@@ -16,8 +16,8 @@ if (usePlan && hasPrintFlag) {
     process.exit(1);
   }
 
-  const timeoutMs = process.env.CLAUDE_USE_PLAN_TIMEOUT_MS
-    ? parseInt(process.env.CLAUDE_USE_PLAN_TIMEOUT_MS, 10)
+  const timeoutMs = process.env.CLAUDE_USE_SUB_TIMEOUT_MS
+    ? parseInt(process.env.CLAUDE_USE_SUB_TIMEOUT_MS, 10)
     : undefined;
 
   try {

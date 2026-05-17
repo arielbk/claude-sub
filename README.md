@@ -1,6 +1,6 @@
 # claude-plan-wrapper
 
-A PATH shim that intercepts `claude -p` invocations and routes them through an interactive Claude session under a PTY — so the call bills against your Claude plan instead of API credits. Opt-in via `CLAUDE_USE_PLAN=1`; installing the shim changes nothing unless the env var is set.
+A PATH shim that intercepts `claude -p` invocations and routes them through an interactive Claude session under a PTY — so the call bills against your Claude plan instead of API credits. Opt-in via `CLAUDE_USE_SUB=1`; installing the shim changes nothing unless the env var is set.
 
 ## Install
 
@@ -35,7 +35,7 @@ Add this to your shell profile (`~/.zshrc`, `~/.bashrc`, etc.) to make it perman
 
 ## Usage
 
-### Without CLAUDE_USE_PLAN (default passthrough)
+### Without CLAUDE_USE_SUB (default passthrough)
 
 All invocations behave identically to the real `claude` binary:
 
@@ -45,26 +45,26 @@ claude --version
 claude -p "summarise this file" < input.txt
 ```
 
-### CLAUDE_USE_PLAN opt-in
+### CLAUDE_USE_SUB opt-in
 
-Set `CLAUDE_USE_PLAN=1` to route `-p`/`--print` invocations through an interactive Claude session instead of the API:
+Set `CLAUDE_USE_SUB=1` to route `-p`/`--print` invocations through an interactive Claude session instead of the API:
 
 ```bash
-CLAUDE_USE_PLAN=1 claude -p "reply with the single word OK"
+CLAUDE_USE_SUB=1 claude -p "reply with the single word OK"
 # OK
 ```
 
 The shim spawns interactive Claude under a PTY, sends the prompt as keystrokes, waits for the response, extracts the clean text, and writes it to stdout. Exit code is `0` on success, `124` on timeout.
 
-Set `CLAUDE_USE_PLAN` in your shell profile to make it permanent:
+Set `CLAUDE_USE_SUB` in your shell profile to make it permanent:
 
 ```bash
-export CLAUDE_USE_PLAN=1
+export CLAUDE_USE_SUB=1
 ```
 
 ## Supported flags
 
-When `CLAUDE_USE_PLAN=1`, only the following flags are forwarded to the interactive session:
+When `CLAUDE_USE_SUB=1`, only the following flags are forwarded to the interactive session:
 
 | Flag | Description |
 |------|-------------|
@@ -88,6 +88,6 @@ The following flags and features are **not supported** in plan mode:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `CLAUDE_USE_PLAN_TIMEOUT_MS` | `300000` (5 min) | Overall timeout for a plan-mode invocation |
+| `CLAUDE_USE_SUB_TIMEOUT_MS` | `300000` (5 min) | Overall timeout for a plan-mode invocation |
 
 If the session times out, the shim exits with code `124` and writes a diagnostic to stderr containing the elapsed time and the last 4 KB of raw PTY output.
