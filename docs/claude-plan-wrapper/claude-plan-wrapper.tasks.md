@@ -86,7 +86,15 @@ Slices will be executed via `/ralph`, which spawns each iteration inside a Docke
 
 ### `publish-prep` — Publish prep: README, bin, packaged install
 
-**Status:** done
+**Status:** needs-review
+
+**Host verification (2026-05-17):** PARTIAL.
+
+Resolver recursion bug — FIXED. `real-claude-resolver.ts` now detects shell-wrapper bins by reading the candidate's contents and looking for our package's identity (`claude-plan-wrapper` + `shim.js`), in addition to the existing symlink-realpath check. Two unit tests added covering both detection paths. Passthrough verified end-to-end: `pnpm pack` → `pnpm add ./tgz` in a fresh temp dir → `claude --version` returns `2.1.143 (Claude Code)` instead of infinite-looping.
+
+Remaining host-only issues (not blocking the resolver fix, but blocking a true e2e PASS):
+1. `node-pty`'s prebuilt `spawn-helper` ships without the executable bit when installed from the packed tarball via pnpm — first PTY spawn fails with `posix_spawnp failed`. After `chmod +x` the spawn works. Likely a pnpm-pack-on-darwin permissions issue; a postinstall hook on this package that chmods node-pty's spawn-helper would close it.
+2. With the chmod fix, the PTY launches and the prompt is typed into the interactive Claude TUI, but the prompt is never submitted (no Enter, or Enter ignored before the TUI is ready). The session times out (or in one run, exited 0 with raw TUI bytes on stdout — the extractor never observed the sentinel). This is a regression-or-incompatibility against the current host Claude version (`2.1.143`) — slice 3/4 sandbox tests presumably passed against the sandbox's Claude. Needs the pty-runner to wait for the TUI prompt to be ready before keystrokes, and the keystroke stream needs a verified submit.
 
 **Outside-in:** `pnpm pack` produces a tarball; `pnpm add -g ./<tarball>` in a fresh directory installs a `claude` binary on PATH; `CLAUDE_USE_PLAN=1 claude -p "reply with the single word OK"` works end-to-end against the user's real Claude install. README documents: install steps, `PATH` ordering requirement, `CLAUDE_USE_PLAN` opt-in semantics, supported flag allowlist, and known limitations (no JSON output, no `--resume`, etc.).
 
