@@ -20,7 +20,7 @@ Wrap the existing `claude -p` PTY shim with a file-based on/off switch and a one
 
 ### `state-module` — State module
 
-**Status:** not-started
+**Status:** done
 
 **Outside-in:** `readState()` returns `{ enabled: boolean, interceptCount: number }`; `writeState(partial)` merges and persists. Backed by `~/.config/claude-sub/state.json` (XDG-aware: respects `$XDG_CONFIG_HOME`).
 
