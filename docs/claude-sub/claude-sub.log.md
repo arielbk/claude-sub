@@ -33,3 +33,21 @@
 
 - `state.test.ts`: 7/7 pass (new).
 - Pre-existing failures in `shim.test.ts` (3) and `timeouts.test.ts` (module load error) unchanged.
+
+---
+
+## shim-consults-state — 2026-05-17
+
+**Slice:** `shim-consults-state`
+**Status:** done
+
+### What changed
+
+- `src/shim-logic.ts`: new module exporting `resolveUsePty(envVar, stateEnabled)` (pure routing function) and `incrementInterceptCount()` (reads state, writes back with +1).
+- `src/shim.ts`: imports `readState` from `./state.js` and `resolveUsePty`, `incrementInterceptCount` from `./shim-logic.js`. Replaces `CLAUDE_USE_SUB === "1"` with `resolveUsePty(process.env.CLAUDE_USE_SUB, state.enabled)`. Calls `incrementInterceptCount()` on successful PTY interception.
+- `src/__tests__/shim.test.ts`: added `vi.mock('../state.js', ...)`, imported `resolveUsePty` and `incrementInterceptCount` from `shim-logic.js`. Added 4 pure unit tests for `resolveUsePty` (all four routing combinations) and 1 mocked test verifying `writeState` is called with `{ interceptCount: old + 1 }`.
+
+### Test results
+
+- 5 new tests in `shim.test.ts` all pass.
+- Total: 51 passed, 3 pre-existing failures unchanged (node-pty native module / real claude path issues in integration tests).

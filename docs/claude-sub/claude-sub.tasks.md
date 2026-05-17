@@ -34,7 +34,7 @@ Wrap the existing `claude -p` PTY shim with a file-based on/off switch and a one
 
 ### `shim-consults-state` — Shim consults state file
 
-**Status:** not-started
+**Status:** done
 
 **Outside-in:** `claude -p "..."` invocation: when `CLAUDE_USE_SUB` env var is set it wins (existing behaviour); when unset, the shim reads the state file and routes through interactive Claude iff `enabled: true`. On successful interception the shim increments `interceptCount`.
 

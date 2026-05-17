@@ -4,9 +4,12 @@ import { resolveRealClaude } from "./real-claude-resolver.js";
 import { parseArgs } from "./flag-mapper.js";
 import { runUnderPty } from "./pty-runner.js";
 import { formatDiagnostic } from "./diagnostic-formatter.js";
+import { readState } from "./state.js";
+import { resolveUsePty, incrementInterceptCount } from "./shim-logic.js";
 
 const args = process.argv.slice(2);
-const usePlan = process.env.CLAUDE_USE_SUB === "1";
+const state = await readState();
+const usePlan = resolveUsePty(process.env.CLAUDE_USE_SUB, state.enabled);
 const hasPrintFlag = args.some((a) => a === "-p" || a === "--print");
 
 if (usePlan && hasPrintFlag) {
@@ -28,6 +31,7 @@ if (usePlan && hasPrintFlag) {
       process.stderr.write(formatDiagnostic(result.reason, result.elapsedMs, result.rawOutput));
       process.exit(124);
     }
+    await incrementInterceptCount();
     process.stdout.write(result.reply + "\n");
     process.exit(result.exitCode);
   } catch (err) {

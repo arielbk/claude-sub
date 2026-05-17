@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { spawnSync } from "node:child_process";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -40,6 +40,49 @@ describe("shim passthrough", () => {
     });
     // Passthrough: output should not contain the stub marker
     expect(result.stdout).not.toContain("[plan-mode stub]");
+  });
+});
+
+vi.mock("../state.js", () => ({
+  readState: vi.fn(),
+  writeState: vi.fn().mockResolvedValue(undefined),
+  stateFilePath: vi.fn(),
+}));
+
+import { resolveUsePty, incrementInterceptCount } from "../shim-logic.js";
+import { readState, writeState } from "../state.js";
+
+describe("resolveUsePty (routing logic)", () => {
+  it("env=unset + state=on → PTY path taken", () => {
+    expect(resolveUsePty(undefined, true)).toBe(true);
+  });
+
+  it("env=unset + state=off → pass-through", () => {
+    expect(resolveUsePty(undefined, false)).toBe(false);
+  });
+
+  it("env=1 + state=off → PTY path taken", () => {
+    expect(resolveUsePty("1", false)).toBe(true);
+  });
+
+  it("env=0 + state=on → pass-through", () => {
+    expect(resolveUsePty("0", true)).toBe(false);
+  });
+});
+
+describe("incrementInterceptCount (mocked state writer)", () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    (writeState as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+  });
+
+  it("reads current state and writes back interceptCount + 1", async () => {
+    (readState as ReturnType<typeof vi.fn>).mockResolvedValue({
+      enabled: true,
+      interceptCount: 5,
+    });
+    await incrementInterceptCount();
+    expect(writeState).toHaveBeenCalledWith({ interceptCount: 6 });
   });
 });
 
