@@ -72,7 +72,7 @@ Slices will be executed via `/ralph`, which spawns each iteration inside a Docke
 
 ### `timeouts-and-diagnostics` — Overall + idle timeouts with diagnostic dumps
 
-**Status:** not-started
+**Status:** done
 
 **Outside-in:** A wrapper invocation that never emits the sentinel within `CLAUDE_USE_PLAN_TIMEOUT_MS` (default 5 minutes) is killed, exits with a non-zero status (suggest exit `124` to match GNU `timeout`), and writes a diagnostic dump to stderr containing (a) the elapsed time, (b) the last ~4KB of raw PTY bytes, and (c) an ANSI-stripped view of the same. A per-byte idle timeout (default ~30s of zero output after the session is established) triggers the same failure path with an "idle timeout" reason.
 

@@ -80,3 +80,27 @@
 - The `extractReply` sentinel scan operates on the fully accumulated PTY buffer, so "split across chunks" is handled naturally by the caller accumulating before calling the function
 
 ---
+
+## [timeouts-and-diagnostics] 2026-05-17
+
+**Status:** done
+
+**What was implemented:**
+- `src/diagnostic-formatter.ts` — `formatDiagnostic(reason, elapsedMs, rawOutput)` produces a stderr diagnostic message containing: the timeout reason (`overall` or `idle`), elapsed time, the last 4096 bytes of raw PTY output, and an ANSI-stripped view of the same
+- Refactored `src/pty-runner.ts`:
+  - `PtyRunResult` is now a discriminated union: `{ ok: true; rawOutput; reply; exitCode }` | `{ ok: false; reason: "overall" | "idle"; elapsedMs; rawOutput }`
+  - Added `IMinimalPty` and `PtySpawner` exported types for test injection
+  - Added `idleTimeoutMs` option (default 30000ms): starts after `initialDelayMs`, resets on every incoming byte, fires `{ ok: false, reason: "idle" }` on expiry
+  - Changed overall `maxMs` timer to resolve with `{ ok: false, reason: "overall" }` instead of rejecting
+  - Added injectable `spawner` option: when provided, `resolveRealClaude()` is not called (safe for tests without a real claude install)
+- Updated `src/shim.ts` — reads `CLAUDE_USE_PLAN_TIMEOUT_MS` env var; on `result.ok === false` writes `formatDiagnostic(...)` to stderr and calls `process.exit(124)`
+- `src/__tests__/timeouts.test.ts` — 10 unit tests using `FakePty` (implements `IMinimalPty`, no real process spawned): overall timeout fires and returns correct shape, pre-timeout rawOutput is captured, idle fires when no bytes arrive, idle vs overall ordering by relative timer values, `formatDiagnostic` covers reason/elapsed/raw/ANSI-stripped sections and 4KB truncation
+
+**Feedback loop result:** `tsc` clean; 39 vitest tests pass (10 new timeout tests + all prior), 2 E2E-gated tests skipped.
+
+**Notes:**
+- Both timeout paths kill the PTY immediately (no graceful shutdown delay), since the session is considered hung
+- The settle timer (success fallback for no-sentinel responses) coexists with idle timeout; `settleMs < idleTimeoutMs` in production defaults (5s vs 30s), so settle fires first for live-but-sentinel-less sessions
+- `CLAUDE_USE_PLAN_TIMEOUT_MS` overrides the 5-minute overall default; idle timeout is not yet user-configurable (can be added if needed)
+
+---

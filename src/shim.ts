@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import { resolveRealClaude } from "./real-claude-resolver.js";
 import { parseArgs } from "./flag-mapper.js";
 import { runUnderPty } from "./pty-runner.js";
+import { formatDiagnostic } from "./diagnostic-formatter.js";
 
 const args = process.argv.slice(2);
 const usePlan = process.env.CLAUDE_USE_PLAN === "1";
@@ -15,13 +16,20 @@ if (usePlan && hasPrintFlag) {
     process.exit(1);
   }
 
+  const timeoutMs = process.env.CLAUDE_USE_PLAN_TIMEOUT_MS
+    ? parseInt(process.env.CLAUDE_USE_PLAN_TIMEOUT_MS, 10)
+    : undefined;
+
   try {
-    const { reply, exitCode } = await runUnderPty(
-      parsed.prompt,
-      parsed.passthroughArgs
-    );
-    process.stdout.write(reply + "\n");
-    process.exit(exitCode);
+    const result = await runUnderPty(parsed.prompt, parsed.passthroughArgs, {
+      maxMs: timeoutMs,
+    });
+    if (!result.ok) {
+      process.stderr.write(formatDiagnostic(result.reason, result.elapsedMs, result.rawOutput));
+      process.exit(124);
+    }
+    process.stdout.write(result.reply + "\n");
+    process.exit(result.exitCode);
   } catch (err) {
     process.stderr.write(`claude-plan-wrapper: PTY error: ${err}\n`);
     process.exit(1);
