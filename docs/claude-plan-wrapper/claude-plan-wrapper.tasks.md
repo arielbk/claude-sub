@@ -10,7 +10,7 @@ Slices will be executed via `/ralph`, which spawns each iteration inside a Docke
 
 ### `scaffold-and-passthrough` — Scaffold project and passthrough shim
 
-**Status:** not-started
+**Status:** done
 
 **Outside-in:** After `pnpm install && pnpm build && pnpm link --global` (or equivalent), `which claude` resolves to the shim binary, and every invocation (`claude --help`, `claude`, `claude -p "..."`) behaves identically to the real `claude` because the shim unconditionally `exec`s the real binary in this slice.
 
