@@ -5,24 +5,30 @@ exports[`buildInstallPayload > matches snapshot 1`] = `
 set -euo pipefail
 
 INSTALL_DIR="/home/agent/.local/lib/claude-sub"
+STAGE_DIR="/tmp/csub-stage"
 BIN_DIR="$INSTALL_DIR/bin"
 DIST_DIR="$INSTALL_DIR/dist"
 CONFIG_DIR="\${XDG_CONFIG_HOME:-$HOME/.config}/claude-sub"
 
 # Idempotent: skip if already installed
-if [[ -L "$BIN_DIR/claude" ]] && [[ "$(readlink -f "$BIN_DIR/claude" 2>/dev/null)" == "$DIST_DIR/shim.js" ]]; then
+if [[ -L "$BIN_DIR/claude" ]] && [[ "$(readlink -f "$BIN_DIR/claude" 2>/dev/null)" == "$DIST_DIR/shim.js" ]] && [[ -d "$INSTALL_DIR/node_modules/node-pty" ]]; then
   echo "claude-sub: already installed"
   exit 0
 fi
 
-mkdir -p "$BIN_DIR" "$DIST_DIR" "$CONFIG_DIR"
+mkdir -p "$BIN_DIR" "$CONFIG_DIR"
 
-# Copy dist files from temp staging area populated by docker cp
-cp -r /tmp/csub-dist/. "$DIST_DIR/"
-chmod +x "$DIST_DIR/shim.js"
+# Copy staged dist/ + package.json into INSTALL_DIR (staged via tar pipe).
+cp -r "$STAGE_DIR/dist" "$INSTALL_DIR/"
+cp "$STAGE_DIR/package.json" "$INSTALL_DIR/"
+chmod +x "$DIST_DIR/shim.js" "$DIST_DIR/csub.js"
+
+# Install runtime deps inside the sandbox so node-pty's native binding matches the sandbox arch.
+cd "$INSTALL_DIR" && npm install --omit=dev --no-audit --no-fund --no-package-lock --silent
 
 # Symlink bin/claude -> dist/shim.js so resolveRealClaude detects it via realpath
 ln -sf "$DIST_DIR/shim.js" "$BIN_DIR/claude"
+ln -sf "$DIST_DIR/csub.js" "$BIN_DIR/csub"
 
 # Prepend bin dir to PATH in ~/.bashrc
 PROFILE="$HOME/.bashrc"

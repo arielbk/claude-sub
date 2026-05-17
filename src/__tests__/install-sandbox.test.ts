@@ -38,9 +38,10 @@ describe("buildInstallPayload", () => {
     expect(payload).toContain("set -euo pipefail");
   });
 
-  it("copies dist files from /tmp/csub-dist staging area", () => {
+  it("copies staged dist/ and package.json into INSTALL_DIR and runs npm install", () => {
     const payload = buildInstallPayload();
-    expect(payload).toContain("/tmp/csub-dist");
+    expect(payload).toContain("/tmp/csub-stage");
     expect(payload).toContain("cp -r");
+    expect(payload).toContain("npm install --omit=dev");
   });
 });
