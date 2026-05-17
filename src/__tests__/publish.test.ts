@@ -4,7 +4,7 @@ import { join } from "path";
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 
 const PROJECT_ROOT = join(import.meta.dirname, "../..");
-const TARBALL_NAME = "claude-plan-wrapper-0.1.0.tgz";
+const TARBALL_NAME = "claude-sub-0.1.0.tgz";
 const TARBALL_PATH = join(PROJECT_ROOT, TARBALL_NAME);
 
 describe("publish-prep", () => {
@@ -50,6 +50,17 @@ describe("publish-prep", () => {
     );
     expect(pkg.bin).toBeDefined();
     expect(pkg.bin.claude).toMatch(/dist\/shim\.js/);
+    expect(pkg.bin.csub).toMatch(/dist\/shim\.js/);
+  });
+
+  it("package.json declares name as claude-sub", () => {
+    const pkg = JSON.parse(
+      execSync(`tar -xOf ${TARBALL_NAME} package/package.json`, {
+        cwd: PROJECT_ROOT,
+        encoding: "utf8",
+      })
+    );
+    expect(pkg.name).toBe("claude-sub");
   });
 
   it("tarball contains README.md", () => {

@@ -1,11 +1,12 @@
 {
-  "name": "claude-plan-wrapper",
+  "name": "claude-sub",
   "version": "0.1.0",
-  "description": "PATH shim that routes claude -p invocations through interactive Claude when CLAUDE_USE_SUB=1",
+  "description": "PATH shim that routes claude -p invocations through interactive Claude when CLAUDE_USE_SUB is set",
   "type": "module",
   "main": "./dist/shim.js",
   "bin": {
-    "claude": "./dist/shim.js"
+    "claude": "./dist/shim.js",
+    "csub": "./dist/shim.js"
   },
   "files": [
     "dist/**/*.js",
