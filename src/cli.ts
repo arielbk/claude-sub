@@ -1,5 +1,6 @@
 import { readState, writeState, stateFilePath } from "./state.js";
 import { runDoctor } from "./doctor.js";
+import { installSandbox } from "./install-sandbox.js";
 export type { DiagnosticResult } from "./doctor.js";
 
 export interface CommandResult {
@@ -40,4 +41,9 @@ export async function cmdDoctor(): Promise<CommandResult> {
     exitCode: result.ok ? 0 : 1,
     output: lines.join("\n"),
   };
+}
+
+export async function cmdInstallSandbox(name: string): Promise<CommandResult> {
+  const result = await installSandbox(name);
+  return { exitCode: result.exitCode, output: result.output };
 }

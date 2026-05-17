@@ -75,6 +75,25 @@
 
 ---
 
+## install-sandbox — 2026-05-17
+
+**Slice:** `install-sandbox`
+**Status:** done
+
+### What changed
+
+- `src/install-sandbox.ts`: new module exporting `buildInstallPayload(): string` (pure function returning the bash script) and `installSandbox(name: string): Promise<InstallResult>`. The payload: creates `/home/agent/.local/lib/claude-sub/{bin,dist}/`, copies dist files from `/tmp/csub-dist/` (staged via `docker cp`), creates a symlink `bin/claude → dist/shim.js` (so `resolveRealClaude()` detects it via `realpathSync` match and skips it), prepends the bin dir to `~/.bashrc`, and writes `~/.config/claude-sub/state.json` with `enabled: true`. Idempotent: skips if the symlink already points at `shim.js`.
+- `src/cli.ts`: added `cmdInstallSandbox(name: string)` handler; imports `installSandbox` from `./install-sandbox.js`.
+- `src/csub.ts`: added `install-sandbox <name>` subcommand dispatch; updated argument parsing to allow exactly one trailing arg for `install-sandbox`; updated usage string.
+- `src/__tests__/install-sandbox.test.ts`: 7 unit tests — snapshot of `buildInstallPayload()`, idempotency marker, symlink creation, state file content, PATH prepend, bash shebang + strict mode, `/tmp/csub-dist` staging.
+
+### Test results
+
+- `install-sandbox.test.ts`: 7/7 pass (new); 1 snapshot written.
+- Total: 76 passed, 3 pre-existing failures unchanged (node-pty native module / real claude path issues in integration tests).
+
+---
+
 ## cli-doctor — 2026-05-17
 
 **Slice:** `cli-doctor`

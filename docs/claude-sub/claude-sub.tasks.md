@@ -76,7 +76,7 @@ Wrap the existing `claude -p` PTY shim with a file-based on/off switch and a one
 
 ### `install-sandbox` — csub install-sandbox
 
-**Status:** not-started
+**Status:** done
 
 **Outside-in:** `csub install-sandbox <name>` shells out to `docker sandbox exec <name>` to: install the package's compiled shim inside the sandbox, replace `/home/agent/.local/bin/claude` with a wrapper that resolves the real claude at `/home/agent/.local/share/claude/versions/*/cli.js`, and write the state file with `enabled: true`. Idempotent — running twice is a no-op the second time.
 
