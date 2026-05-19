@@ -25,3 +25,10 @@
 ### Notes
 
 - The required clean-clone `pnpm install && pnpm build && pnpm test` loop could not be completed end-to-end in this sandbox because network access to `registry.npmjs.org` is unavailable and the local pnpm store is incomplete. The suite was green before the install retry purged the previous module layout, and the remaining package-manager contract checks pass locally.
+
+## `remove-env-toggle` — 2026-05-19 12:14:39
+
+**Status:** done
+**Summary:** `resolveUsePty(envVar, stateEnabled)` now returns `stateEnabled` regardless of `CLAUDE_USE_SUB`, and the shim passes `undefined` for the old env toggle so enable/disable routing consults only the state file. Existing shim tests were updated so state-enabled fixtures drive plan-mode cases that previously relied on `CLAUDE_USE_SUB=1`.
+**Deviations:** Full vitest could not run because `node_modules` is incomplete (`@vitest/utils` missing), `pnpm install --offline` lacks required tarballs, and online `pnpm install` is blocked by sandbox DNS (`ENOTFOUND registry.npmjs.org`). Structural checks passed: `node_modules/.bin/tsc --noEmit`, `pnpm build`, a direct built-module `resolveUsePty` matrix check, and built-shim smokes for state-disabled passthrough plus state-enabled fail-open bypass.
+**Handoff:** Downstream slices should treat `CLAUDE_USE_SUB` as removed for routing; `CLAUDE_USE_SUB_TIMEOUT_MS` still configures PTY timeout and was intentionally left in place. The worktree still contains unrelated pre-existing changes (`.claude/scheduled_tasks.lock`, `claude-plan-wrapper-0.1.0.tgz`, and `docs/dx-overhaul/dx-overhaul.prd.md`) that were not included in this commit.

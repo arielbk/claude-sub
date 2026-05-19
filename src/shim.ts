@@ -9,7 +9,7 @@ import { resolveUsePty, incrementInterceptCount, maybeRunFailOpenBypass } from "
 
 const args = process.argv.slice(2);
 const state = await readState();
-const usePlan = resolveUsePty(process.env.CLAUDE_USE_SUB, state.enabled);
+const usePlan = resolveUsePty(undefined, state.enabled);
 const hasPrintFlag = args.some((a) => a === "-p" || a === "--print");
 
 if (usePlan && hasPrintFlag) {

@@ -4,8 +4,7 @@ import { resolveRealClaude } from "./real-claude-resolver.js";
 import { detectFailOpen } from "./fail-open-detector.js";
 
 export function resolveUsePty(envVar: string | undefined, stateEnabled: boolean): boolean {
-  if (envVar === "1") return true;
-  if (envVar === "0") return false;
+  void envVar;
   return stateEnabled;
 }
 

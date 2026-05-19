@@ -85,12 +85,12 @@ describe("resolveUsePty (routing logic)", () => {
     expect(resolveUsePty(undefined, false)).toBe(false);
   });
 
-  it("env=1 + state=off → PTY path taken", () => {
-    expect(resolveUsePty("1", false)).toBe(true);
+  it("env=1 + state=off → pass-through", () => {
+    expect(resolveUsePty("1", false)).toBe(false);
   });
 
-  it("env=0 + state=on → pass-through", () => {
-    expect(resolveUsePty("0", true)).toBe(false);
+  it("env=0 + state=on → PTY path taken", () => {
+    expect(resolveUsePty("0", true)).toBe(true);
   });
 });
 
@@ -191,6 +191,11 @@ describe("shim plan-mode branch (CLAUDE_USE_SUB=1)", () => {
       const configHome = join(tmp, "config");
       const argvLog = join(tmp, "argv.json");
       mkdirSync(realDir);
+      mkdirSync(join(configHome, "claude-sub"), { recursive: true });
+      writeFileSync(
+        join(configHome, "claude-sub", "state.json"),
+        JSON.stringify({ enabled: true, interceptCount: 0, bypassCount: 0 })
+      );
       writeFileSync(
         join(realDir, "claude"),
         `#!/usr/bin/env node\nconst fs = require("node:fs");\nfs.writeFileSync(${JSON.stringify(
@@ -233,18 +238,29 @@ describe("shim plan-mode branch (CLAUDE_USE_SUB=1)", () => {
   });
 
   it("exits non-zero with stderr message when an unknown unsupported flag is given", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "shim-unsupported-"));
+    const configHome = join(tmp, "config");
+    mkdirSync(join(configHome, "claude-sub"), { recursive: true });
+    writeFileSync(
+      join(configHome, "claude-sub", "state.json"),
+      JSON.stringify({ enabled: true, interceptCount: 0, bypassCount: 0 })
+    );
     const result = spawnSync(
       "node",
       [shimBin, "-p", "hello", "--unknown-flag"],
       {
         encoding: "utf8",
         timeout: 15000,
-        env: { ...process.env, CLAUDE_USE_SUB: "1" },
+        env: { ...process.env, CLAUDE_USE_SUB: "1", XDG_CONFIG_HOME: configHome },
       }
     );
-    expect(result.status).not.toBe(0);
-    expect(result.stderr).toContain("--unknown-flag");
-    expect(result.stderr).toContain("--model");
+    try {
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain("--unknown-flag");
+      expect(result.stderr).toContain("--model");
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
   });
 
   it("CLAUDE_USE_SUB=1 without -p passes through to real claude", () => {

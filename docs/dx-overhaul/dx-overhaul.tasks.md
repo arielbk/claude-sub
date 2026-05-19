@@ -20,7 +20,7 @@ Rename the package to `claude-sub`, switch dev + install to pnpm, kill the env-v
 
 ### `remove-env-toggle` — Remove CLAUDE_USE_SUB env-var as toggle
 
-**Status:** not-started
+**Status:** done
 
 **Outside-in:** `resolveUsePty(envVar, stateEnabled)` returns `stateEnabled` regardless of `envVar`. The shim consults only the state file for the enable/disable decision. `CLAUDE_USE_SUB_TIMEOUT_MS` stays (it's a timeout config, not a toggle).
 
