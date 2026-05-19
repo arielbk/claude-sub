@@ -62,9 +62,7 @@ Rename the package to `claude-sub`, switch dev + install to pnpm, kill the env-v
 
 ### `readme-rewrite` — README terminology, ToS, install rewrite
 
-**Status:** in-progress
-
-> Reserved for Claude (orchestrator) — Codex iterations must skip this slice. The user wants prose written by Claude directly.
+**Status:** done
 
 **Outside-in:** README opens with a one-line description, then a one-sentence ToS disclaimer (names Anthropic ToS, links to Anthropic Claude Code docs), then a short "what it does" paragraph. Install section is the single command `npx claude-sub setup`. Usage section explains `csub on`/`off`/`status`. PATH troubleshooting and manual install path move to a Troubleshooting section. The words "plan" / "plan mode" / "plan wrapper" no longer appear as references to this project (prose uses "subscription"; identifiers stay "sub"). The "CLAUDE_USE_SUB opt-in" section is removed.
 
