@@ -34,7 +34,7 @@ Rename the package to `claude-sub`, switch dev + install to pnpm, kill the env-v
 
 ### `setup-command` — `csub setup` / `npx claude-sub setup`
 
-**Status:** needs-review
+**Status:** done
 
 **Outside-in:** Running `npx claude-sub setup` (or `csub setup` post-install) detects the user's shell (`zsh` / `bash` / `fish`), prints the planned rc-file edit as a diff, prompts `[y/N]`, writes the line (with a marker comment so `uninstall` can reverse it) on confirmation, then verifies `which claude` resolves to the shim and prints success or a remediation hint. Leaves enabled state `false`. Supports `--non-interactive` to skip the prompt.
 
