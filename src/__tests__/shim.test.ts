@@ -1,12 +1,22 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { spawnSync } from "node:child_process";
-import { resolve, dirname } from "node:path";
+import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { existsSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const shimBin = resolve(__dirname, "../../dist/shim.js");
-const realClaude = "/home/agent/.local/bin/claude";
+
+function makeFakeClaude(contents: string): { tmp: string; realDir: string } {
+  const tmp = mkdtempSync(join(tmpdir(), "shim-real-claude-"));
+  const realDir = join(tmp, "bin");
+  mkdirSync(realDir);
+  const realClaude = join(realDir, "claude");
+  writeFileSync(realClaude, contents);
+  chmodSync(realClaude, 0o755);
+  return { tmp, realDir };
+}
 
 describe("shim passthrough", () => {
   it("dist/shim.js exists after build", () => {
@@ -14,32 +24,46 @@ describe("shim passthrough", () => {
   });
 
   it("shim --help output matches real claude --help", () => {
+    const fake = makeFakeClaude("#!/bin/sh\necho real-help\nexit 21\n");
     const shimResult = spawnSync("node", [shimBin, "--help"], {
       encoding: "utf8",
       timeout: 15000,
       env: {
         ...process.env,
         CLAUDE_USE_SUB: undefined,
+        PATH: `${fake.realDir}:${process.env.PATH ?? ""}`,
       },
     });
 
-    const realResult = spawnSync(realClaude, ["--help"], {
+    const realResult = spawnSync(join(fake.realDir, "claude"), ["--help"], {
       encoding: "utf8",
       timeout: 15000,
     });
 
-    expect(shimResult.status).toBe(realResult.status);
-    expect(shimResult.stdout).toBe(realResult.stdout);
+    try {
+      expect(shimResult.status).toBe(realResult.status);
+      expect(shimResult.stdout).toBe(realResult.stdout);
+    } finally {
+      rmSync(fake.tmp, { recursive: true, force: true });
+    }
   });
 
   it("CLAUDE_USE_SUB unset: shim passes through -p without plan-mode", () => {
+    const fake = makeFakeClaude("#!/bin/sh\necho real-help\n");
     const result = spawnSync("node", [shimBin, "--help"], {
       encoding: "utf8",
       timeout: 15000,
-      env: { ...process.env, CLAUDE_USE_SUB: undefined },
+      env: {
+        ...process.env,
+        CLAUDE_USE_SUB: undefined,
+        PATH: `${fake.realDir}:${process.env.PATH ?? ""}`,
+      },
     });
-    // Passthrough: output should not contain the stub marker
-    expect(result.stdout).not.toContain("[plan-mode stub]");
+    try {
+      expect(result.stdout).toBe("real-help\n");
+    } finally {
+      rmSync(fake.tmp, { recursive: true, force: true });
+    }
   });
 });
 
@@ -49,7 +73,7 @@ vi.mock("../state.js", () => ({
   stateFilePath: vi.fn(),
 }));
 
-import { resolveUsePty, incrementInterceptCount } from "../shim-logic.js";
+import { resolveUsePty, incrementInterceptCount, maybeRunFailOpenBypass } from "../shim-logic.js";
 import { readState, writeState } from "../state.js";
 
 describe("resolveUsePty (routing logic)", () => {
@@ -86,6 +110,59 @@ describe("incrementInterceptCount (mocked state writer)", () => {
   });
 });
 
+describe("maybeRunFailOpenBypass (mocked real claude exec)", () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    (writeState as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+  });
+
+  it("routes fail-open flags to real claude with original argv and increments bypassCount", async () => {
+    (readState as ReturnType<typeof vi.fn>).mockResolvedValue({
+      enabled: true,
+      interceptCount: 2,
+      bypassCount: 4,
+    });
+    const resolveRealClaude = vi.fn(() => "/usr/local/bin/claude");
+    const spawnSync = vi.fn(() => ({ status: 7, signal: null }));
+    const writeStderr = vi.fn();
+
+    const result = await maybeRunFailOpenBypass(
+      ["-p", "prompt", "--output-format", "stream-json"],
+      {
+        resolveRealClaude,
+        spawnSync,
+        writeStderr,
+        env: { CLAUDE_USE_SUB: "1" },
+      }
+    );
+
+    expect(result).toEqual({ bypassed: true, exitCode: 7 });
+    expect(resolveRealClaude).toHaveBeenCalledOnce();
+    expect(spawnSync).toHaveBeenCalledWith(
+      "/usr/local/bin/claude",
+      ["-p", "prompt", "--output-format", "stream-json"],
+      { stdio: "inherit", env: { CLAUDE_USE_SUB: "1" } }
+    );
+    expect(writeStderr).toHaveBeenCalledWith(
+      "csub: --output-format is not supported under plan mode; this call will bill against API\n"
+    );
+    expect(writeState).toHaveBeenCalledWith({ bypassCount: 5 });
+  });
+
+  it("leaves allowlisted plan-mode invocations on the PTY path without incrementing bypassCount", async () => {
+    const result = await maybeRunFailOpenBypass(["-p", "prompt", "--model", "sonnet"], {
+      resolveRealClaude: vi.fn(),
+      spawnSync: vi.fn(),
+      writeStderr: vi.fn(),
+      env: { CLAUDE_USE_SUB: "1" },
+    });
+
+    expect(result).toEqual({ bypassed: false });
+    expect(readState).not.toHaveBeenCalled();
+    expect(writeState).not.toHaveBeenCalled();
+  });
+});
+
 const isE2E = process.env.CLAUDE_USE_SUB_E2E === "1";
 
 describe("shim plan-mode branch (CLAUDE_USE_SUB=1)", () => {
@@ -107,10 +184,58 @@ describe("shim plan-mode branch (CLAUDE_USE_SUB=1)", () => {
     120000
   );
 
-  it("exits non-zero with stderr message when unsupported flag is given", () => {
+  it("fail-open flag warns, increments bypassCount, and passes original argv to real claude", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "shim-fail-open-"));
+    try {
+      const realDir = join(tmp, "bin");
+      const configHome = join(tmp, "config");
+      const argvLog = join(tmp, "argv.json");
+      mkdirSync(realDir);
+      writeFileSync(
+        join(realDir, "claude"),
+        `#!/usr/bin/env node\nconst fs = require("node:fs");\nfs.writeFileSync(${JSON.stringify(
+          argvLog
+        )}, JSON.stringify(process.argv.slice(2)));\nprocess.exit(13);\n`
+      );
+      chmodSync(join(realDir, "claude"), 0o755);
+
+      const result = spawnSync(
+        "node",
+        [shimBin, "-p", "hello", "--output-format", "stream-json"],
+        {
+          encoding: "utf8",
+          timeout: 15000,
+          env: {
+            ...process.env,
+            CLAUDE_USE_SUB: "1",
+            XDG_CONFIG_HOME: configHome,
+            PATH: `${realDir}:${process.env.PATH ?? ""}`,
+          },
+        }
+      );
+
+      expect(result.status).toBe(13);
+      expect(result.stderr).toContain(
+        "csub: --output-format is not supported under plan mode; this call will bill against API"
+      );
+      expect(JSON.parse(readFileSync(argvLog, "utf8"))).toEqual([
+        "-p",
+        "hello",
+        "--output-format",
+        "stream-json",
+      ]);
+      expect(
+        JSON.parse(readFileSync(join(configHome, "claude-sub", "state.json"), "utf8"))
+      ).toMatchObject({ bypassCount: 1, interceptCount: 0 });
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("exits non-zero with stderr message when an unknown unsupported flag is given", () => {
     const result = spawnSync(
       "node",
-      [shimBin, "-p", "hello", "--output-format", "json"],
+      [shimBin, "-p", "hello", "--unknown-flag"],
       {
         encoding: "utf8",
         timeout: 15000,
@@ -118,21 +243,30 @@ describe("shim plan-mode branch (CLAUDE_USE_SUB=1)", () => {
       }
     );
     expect(result.status).not.toBe(0);
-    expect(result.stderr).toContain("--output-format");
+    expect(result.stderr).toContain("--unknown-flag");
     expect(result.stderr).toContain("--model");
   });
 
   it("CLAUDE_USE_SUB=1 without -p passes through to real claude", () => {
+    const fake = makeFakeClaude("#!/bin/sh\necho real-help\nexit 17\n");
     const shimResult = spawnSync("node", [shimBin, "--help"], {
       encoding: "utf8",
       timeout: 15000,
-      env: { ...process.env, CLAUDE_USE_SUB: "1" },
+      env: {
+        ...process.env,
+        CLAUDE_USE_SUB: "1",
+        PATH: `${fake.realDir}:${process.env.PATH ?? ""}`,
+      },
     });
-    const realResult = spawnSync(realClaude, ["--help"], {
+    const realResult = spawnSync(join(fake.realDir, "claude"), ["--help"], {
       encoding: "utf8",
       timeout: 15000,
     });
-    expect(shimResult.status).toBe(realResult.status);
-    expect(shimResult.stdout).toBe(realResult.stdout);
+    try {
+      expect(shimResult.status).toBe(realResult.status);
+      expect(shimResult.stdout).toBe(realResult.stdout);
+    } finally {
+      rmSync(fake.tmp, { recursive: true, force: true });
+    }
   });
 });

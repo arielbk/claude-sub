@@ -55,7 +55,7 @@ describe("cmdOff", () => {
 
 describe("cmdStatus", () => {
   it("includes 'on' in output when enabled is true", async () => {
-    vi.mocked(readState).mockResolvedValue({ enabled: true, interceptCount: 5 });
+    vi.mocked(readState).mockResolvedValue({ enabled: true, interceptCount: 5, bypassCount: 0 });
     vi.mocked(stateFilePath).mockReturnValue("/tmp/state.json");
     const result = await cmdStatus();
     expect(result.output).toContain("on");
@@ -63,7 +63,7 @@ describe("cmdStatus", () => {
   });
 
   it("includes 'off' in output when enabled is false", async () => {
-    vi.mocked(readState).mockResolvedValue({ enabled: false, interceptCount: 0 });
+    vi.mocked(readState).mockResolvedValue({ enabled: false, interceptCount: 0, bypassCount: 0 });
     vi.mocked(stateFilePath).mockReturnValue("/tmp/state.json");
     const result = await cmdStatus();
     expect(result.output).toContain("off");
@@ -71,21 +71,21 @@ describe("cmdStatus", () => {
   });
 
   it("includes state file path in output", async () => {
-    vi.mocked(readState).mockResolvedValue({ enabled: false, interceptCount: 0 });
+    vi.mocked(readState).mockResolvedValue({ enabled: false, interceptCount: 0, bypassCount: 0 });
     vi.mocked(stateFilePath).mockReturnValue("/home/user/.config/claude-sub/state.json");
     const result = await cmdStatus();
     expect(result.output).toContain("/home/user/.config/claude-sub/state.json");
   });
 
   it("includes intercept count in output", async () => {
-    vi.mocked(readState).mockResolvedValue({ enabled: true, interceptCount: 42 });
+    vi.mocked(readState).mockResolvedValue({ enabled: true, interceptCount: 42, bypassCount: 0 });
     vi.mocked(stateFilePath).mockReturnValue("/tmp/state.json");
     const result = await cmdStatus();
     expect(result.output).toContain("42");
   });
 
   it("returns exit code 0", async () => {
-    vi.mocked(readState).mockResolvedValue({ enabled: false, interceptCount: 0 });
+    vi.mocked(readState).mockResolvedValue({ enabled: false, interceptCount: 0, bypassCount: 0 });
     vi.mocked(stateFilePath).mockReturnValue("/tmp/state.json");
     const result = await cmdStatus();
     expect(result.exitCode).toBe(0);
