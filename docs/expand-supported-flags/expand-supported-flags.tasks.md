@@ -42,7 +42,7 @@ Expand `claude-plan-wrapper`'s flag allowlist to cover what orchestrators (ralph
 
 ### `fail-open-detector` — Pure fail-open detector
 
-**Status:** not-started
+**Status:** done
 
 **Outside-in:** `detectFailOpen(argv: string[])` returns `{ bypass: false }` or `{ bypass: true, reason: string }` where `reason` is the offending flag name. Pure function, no I/O.
 
@@ -54,7 +54,7 @@ Expand `claude-plan-wrapper`'s flag allowlist to cover what orchestrators (ralph
 
 ### `fail-open-routing` — Wire fail-open into the shim entry
 
-**Status:** not-started
+**Status:** done
 
 **Outside-in:** `CLAUDE_USE_SUB=1 claude -p "prompt" --output-format stream-json` exec's the real `claude` with the original argv, emits `csub: --output-format is not supported under plan mode; this call will bill against API` to stderr, increments `bypassCount`, and exits with the real `claude`'s exit code.
 

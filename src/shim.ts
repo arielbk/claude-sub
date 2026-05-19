@@ -5,7 +5,7 @@ import { parseArgs } from "./flag-mapper.js";
 import { runUnderPty } from "./pty-runner.js";
 import { formatDiagnostic } from "./diagnostic-formatter.js";
 import { readState } from "./state.js";
-import { resolveUsePty, incrementInterceptCount } from "./shim-logic.js";
+import { resolveUsePty, incrementInterceptCount, maybeRunFailOpenBypass } from "./shim-logic.js";
 
 const args = process.argv.slice(2);
 const state = await readState();
@@ -13,6 +13,11 @@ const usePlan = resolveUsePty(process.env.CLAUDE_USE_SUB, state.enabled);
 const hasPrintFlag = args.some((a) => a === "-p" || a === "--print");
 
 if (usePlan && hasPrintFlag) {
+  const failOpen = await maybeRunFailOpenBypass(args);
+  if (failOpen.bypassed) {
+    process.exit(failOpen.exitCode);
+  }
+
   const parsed = parseArgs(args);
   if (!parsed.ok) {
     process.stderr.write(`claude-plan-wrapper: ${parsed.error}\n`);
