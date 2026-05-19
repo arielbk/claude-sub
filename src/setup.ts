@@ -102,7 +102,7 @@ export async function setup(options: SetupOptions = {}): Promise<SetupResult> {
     lines.push("Open a new shell, then run: csub doctor");
   }
 
-  return { exitCode: diagnostic.ok ? 0 : 1, output: lines.join("\n"), wrote, plan };
+  return { exitCode: 0, output: lines.join("\n"), wrote, plan };
 }
 
 async function promptForConfirmation(prompt: string): Promise<boolean> {

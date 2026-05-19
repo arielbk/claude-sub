@@ -1,4 +1,5 @@
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { access, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { constants } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -129,6 +130,22 @@ describe("uninstall", () => {
       'export PATH="/pkg/bin:$PATH" # claude-sub setup\n'
     );
     expect(runCommand).not.toHaveBeenCalled();
+  });
+
+  it("removes the rc file when removing the marker line leaves it empty", async () => {
+    const homeDir = await tempHome();
+    const rcFile = join(homeDir, ".zshrc");
+    await writeFile(rcFile, 'export PATH="/pkg/bin:$PATH" # claude-sub setup\n', "utf8");
+    const runCommand = vi.fn().mockResolvedValue({ exitCode: 1, stdout: "" });
+
+    await uninstall({
+      env: { SHELL: "/bin/zsh" },
+      homeDir,
+      confirm: async () => true,
+      runCommand,
+    });
+
+    await expect(access(rcFile, constants.F_OK)).rejects.toThrow();
   });
 });
 

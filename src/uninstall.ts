@@ -1,4 +1,4 @@
-import { access, readFile, writeFile } from "node:fs/promises";
+import { access, readFile, unlink, writeFile } from "node:fs/promises";
 import { constants } from "node:fs";
 import { execFile } from "node:child_process";
 import { createInterface } from "node:readline/promises";
@@ -147,6 +147,10 @@ async function removeMarkerLines(filePath: string): Promise<void> {
   });
   let next = kept.join("\n");
   if (hadFinalNewline && !next.endsWith("\n")) next += "\n";
+  if (next.trim() === "") {
+    await unlink(filePath);
+    return;
+  }
   await writeFile(filePath, next, "utf8");
 }
 

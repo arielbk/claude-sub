@@ -161,6 +161,25 @@ describe("setup", () => {
       'export PATH="/pkg/bin:$PATH" # claude-sub setup\n'
     );
   });
+
+  it("returns exit 0 when the rc line is written even if doctor flags the current shell", async () => {
+    const homeDir = await tempHome();
+    vi.mocked(runDoctor).mockResolvedValue({
+      ok: false,
+      message: "csub shim not found on PATH — run: npm install -g claude-sub",
+    });
+
+    const result = await setup({
+      env: { SHELL: "/bin/zsh" },
+      homeDir,
+      binDir: "/pkg/bin",
+      nonInteractive: true,
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.wrote).toBe(true);
+    expect(result.output).toContain("Open a new shell, then run: csub doctor");
+  });
 });
 
 async function tempHome(): Promise<string> {
