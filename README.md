@@ -41,14 +41,28 @@ Exit code is `0` on success, `124` if the PTY session times out.
 
 ## Supported flags
 
-When routing is enabled, only the following flags are forwarded to the interactive session:
+When routing is enabled, the following flags are forwarded to the interactive session:
 
 | Flag | Description |
 |------|-------------|
 | `--model` / `-m` | Model to use (e.g. `claude-sonnet-4-5`) |
 | `--verbose` / `-v` | Enable verbose output |
+| `--append-system-prompt` | Append to the system prompt |
+| `--system-prompt` | Override the system prompt |
+| `--permission-mode` | Set permission mode (e.g. `acceptEdits`) |
+| `--dangerously-skip-permissions` | Skip permission prompts |
+| `--settings` | Path to a settings file |
+| `--agent` / `--agents` | Agent configuration |
+| `--strict-mcp-config` | Strict MCP config validation |
+| `--bare` | Bare-mode output |
+| `--add-dir` | Additional working directories (variadic) |
+| `--mcp-config` | MCP config paths (variadic) |
+| `--allowedTools` / `--allowed-tools` | Tool allowlist (variadic) |
+| `--disallowedTools` / `--disallowed-tools` | Tool denylist (variadic) |
+| `--tools` | Tool list (variadic) |
+| `--plugin-dir` | Plugin directories (variadic) |
 
-All other flags cause the shim to exit non-zero with a message naming the unsupported flag.
+Any other flag causes the shim to exit non-zero with a message naming the unsupported flag and listing what's accepted.
 
 ## Known limitations
 
