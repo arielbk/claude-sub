@@ -7,7 +7,8 @@
   "main": "./dist/shim.js",
   "bin": {
     "claude": "./dist/shim.js",
-    "csub": "./dist/csub.js"
+    "csub": "./dist/csub.js",
+    "claude-sub": "./dist/csub.js"
   },
   "files": [
     "dist/**/*.js",
