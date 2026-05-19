@@ -60,6 +60,83 @@ describe("parseArgs — supported flags", () => {
     if (!result.ok) return;
     expect(result.passthroughArgs).toEqual(["-v"]);
   });
+
+  it("accepts variadic --add-dir with one value", () => {
+    const result = parseArgs(["-p", "hi", "--add-dir", "src"]);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.passthroughArgs).toEqual(["--add-dir", "src"]);
+  });
+
+  it("accepts variadic --add-dir with multiple values", () => {
+    const result = parseArgs(["-p", "hi", "--add-dir", "src", "docs", "tests"]);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.passthroughArgs).toEqual(["--add-dir", "src", "docs", "tests"]);
+  });
+
+  it("stops variadic values at the next flag", () => {
+    const result = parseArgs([
+      "-p",
+      "hi",
+      "--add-dir",
+      "src",
+      "docs",
+      "--model",
+      "sonnet",
+    ]);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.passthroughArgs).toEqual([
+      "--add-dir",
+      "src",
+      "docs",
+      "--model",
+      "sonnet",
+    ]);
+  });
+
+  it("accepts variadic values at the end of argv", () => {
+    const result = parseArgs(["-p", "hi", "--mcp-config", "a.json", "b.json"]);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.passthroughArgs).toEqual(["--mcp-config", "a.json", "b.json"]);
+  });
+
+  it("accepts repeated --plugin-dir groups", () => {
+    const result = parseArgs([
+      "-p",
+      "hi",
+      "--plugin-dir",
+      "plugins/a",
+      "--plugin-dir",
+      "plugins/b",
+    ]);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.passthroughArgs).toEqual([
+      "--plugin-dir",
+      "plugins/a",
+      "--plugin-dir",
+      "plugins/b",
+    ]);
+  });
+
+  it.each([
+    ["--add-dir", ["a", "b"]],
+    ["--mcp-config", ["x.json", "y.json"]],
+    ["--allowedTools", ["Bash(git *)", "Edit"]],
+    ["--allowed-tools", ["Bash(git *)", "Edit"]],
+    ["--disallowedTools", ["WebFetch", "Read"]],
+    ["--disallowed-tools", ["WebFetch", "Read"]],
+    ["--tools", ["Bash", "Edit"]],
+    ["--plugin-dir", ["plugins/a"]],
+  ])("accepts variadic %s and forwards its values", (flag, values) => {
+    const result = parseArgs(["-p", "hi", flag, ...values]);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.passthroughArgs).toEqual([flag, ...values]);
+  });
 });
 
 describe("parseArgs — unsupported flags", () => {

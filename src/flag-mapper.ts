@@ -14,6 +14,16 @@ export type FlagMapResult = ParseSuccess | ParseFailure;
 
 const SUPPORTED_VALUE_FLAGS = new Set(["--model", "-m"]);
 const SUPPORTED_BOOL_FLAGS = new Set(["--verbose", "-v"]);
+const SUPPORTED_VARIADIC_FLAGS = new Set([
+  "--add-dir",
+  "--mcp-config",
+  "--allowedTools",
+  "--allowed-tools",
+  "--disallowedTools",
+  "--disallowed-tools",
+  "--tools",
+  "--plugin-dir",
+]);
 const PRINT_FLAGS = new Set(["-p", "--print"]);
 
 const UNSUPPORTED_FLAGS = [
@@ -70,6 +80,19 @@ export function parseArgs(args: string[]): FlagMapResult {
     if (SUPPORTED_BOOL_FLAGS.has(arg)) {
       passthroughArgs.push(arg);
       i++;
+      continue;
+    }
+
+    if (SUPPORTED_VARIADIC_FLAGS.has(arg)) {
+      const valuesStart = i + 1;
+      i = valuesStart;
+      while (i < args.length && !args[i].startsWith("-")) {
+        i++;
+      }
+      if (i === valuesStart) {
+        return { ok: false, error: `Flag ${arg} requires a value` };
+      }
+      passthroughArgs.push(arg, ...args.slice(valuesStart, i));
       continue;
     }
 
