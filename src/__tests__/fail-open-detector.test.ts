@@ -18,7 +18,7 @@ describe("detectFailOpen", () => {
     "--from-pr",
     "--no-session-persistence",
     "--max-budget-usd",
-  ])("detects %s as a fail-open flag", (flag) => {
+  ])("detects %s as a fail-open flag", (flag: string) => {
     expect(detectFailOpen(["-p", "hi", flag, "value"])).toEqual({
       bypass: true,
       reason: flag,

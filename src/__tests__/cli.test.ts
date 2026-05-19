@@ -13,15 +13,34 @@ vi.mock("../doctor.js", () => ({
   getClaudePaths: vi.fn(),
 }));
 
+vi.mock("../uninstall.js", () => ({
+  uninstall: vi.fn(),
+}));
+
 import { writeState, readState, stateFilePath } from "../state.js";
 import { runDoctor } from "../doctor.js";
-import { cmdOn, cmdOff, cmdStatus } from "../cli.js";
+import { uninstall } from "../uninstall.js";
+import { cmdOn, cmdOff, cmdStatus, cmdUninstall } from "../cli.js";
 
 beforeEach(() => {
   vi.resetAllMocks();
   vi.mocked(runDoctor).mockResolvedValue({
     ok: true,
     message: "OK — shim is first on PATH",
+  });
+  vi.mocked(uninstall).mockResolvedValue({
+    exitCode: 0,
+    output: "uninstalled",
+    removedMarker: true,
+    packagePresent: true,
+    uninstalledPackage: true,
+    plan: {
+      shell: "zsh",
+      rcFile: "/home/me/.zshrc",
+      marker: "# claude-sub setup",
+      markerPresent: true,
+      diff: "",
+    },
   });
 });
 
@@ -89,5 +108,33 @@ describe("cmdStatus", () => {
     vi.mocked(stateFilePath).mockReturnValue("/tmp/state.json");
     const result = await cmdStatus();
     expect(result.exitCode).toBe(0);
+  });
+});
+
+describe("cmdUninstall", () => {
+  it("passes non-interactive options to uninstall", async () => {
+    await cmdUninstall({ nonInteractive: true });
+    expect(uninstall).toHaveBeenCalledWith({ nonInteractive: true });
+  });
+
+  it("returns the uninstall exit code and output", async () => {
+    vi.mocked(uninstall).mockResolvedValueOnce({
+      exitCode: 0,
+      output: "Global claude-sub package uninstalled.",
+      removedMarker: false,
+      packagePresent: true,
+      uninstalledPackage: true,
+      plan: {
+        shell: "zsh",
+        rcFile: "/home/me/.zshrc",
+        marker: "# claude-sub setup",
+        markerPresent: false,
+        diff: "",
+      },
+    });
+
+    const result = await cmdUninstall();
+
+    expect(result).toEqual({ exitCode: 0, output: "Global claude-sub package uninstalled." });
   });
 });

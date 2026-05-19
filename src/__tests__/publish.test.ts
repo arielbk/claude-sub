@@ -10,11 +10,11 @@ const TARBALL_PATH = join(PROJECT_ROOT, TARBALL_NAME);
 describe("publish-prep", () => {
   beforeAll(() => {
     // Build first, then pack
-    execSync("npm run build", { cwd: PROJECT_ROOT, stdio: "pipe" });
+    execSync("pnpm run build", { cwd: PROJECT_ROOT, stdio: "pipe" });
     if (existsSync(TARBALL_PATH)) {
       execSync(`rm -f ${TARBALL_NAME}`, { cwd: PROJECT_ROOT });
     }
-    execSync("npm pack", { cwd: PROJECT_ROOT, stdio: "pipe" });
+    execSync("pnpm pack", { cwd: PROJECT_ROOT, stdio: "pipe" });
   });
 
   afterAll(() => {
@@ -25,6 +25,14 @@ describe("publish-prep", () => {
 
   it("pnpm pack produces a tarball", () => {
     expect(existsSync(TARBALL_PATH)).toBe(true);
+  });
+
+  it("pins pnpm as the package manager and does not track an npm lockfile", () => {
+    const pkg = JSON.parse(readFileSync(join(PROJECT_ROOT, "package.json"), "utf8"));
+
+    expect(pkg.packageManager).toMatch(/^pnpm@\d+\.\d+\.\d+$/);
+    expect(existsSync(join(PROJECT_ROOT, "pnpm-lock.yaml"))).toBe(true);
+    expect(existsSync(join(PROJECT_ROOT, "package-lock.json"))).toBe(false);
   });
 
   it("tarball contains dist/shim.js", () => {
