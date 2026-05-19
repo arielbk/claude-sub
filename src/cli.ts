@@ -2,6 +2,7 @@ import { readState, writeState, stateFilePath } from "./state.js";
 import { runDoctor } from "./doctor.js";
 import { installSandbox } from "./install-sandbox.js";
 import { setup } from "./setup.js";
+import { uninstall } from "./uninstall.js";
 export type { DiagnosticResult } from "./doctor.js";
 
 export interface CommandResult {
@@ -51,5 +52,10 @@ export async function cmdInstallSandbox(name: string): Promise<CommandResult> {
 
 export async function cmdSetup(options: { nonInteractive?: boolean } = {}): Promise<CommandResult> {
   const result = await setup(options);
+  return { exitCode: result.exitCode, output: result.output };
+}
+
+export async function cmdUninstall(options: { nonInteractive?: boolean } = {}): Promise<CommandResult> {
+  const result = await uninstall(options);
   return { exitCode: result.exitCode, output: result.output };
 }

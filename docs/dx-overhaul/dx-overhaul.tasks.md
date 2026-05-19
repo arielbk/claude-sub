@@ -48,7 +48,7 @@ Rename the package to `claude-sub`, switch dev + install to pnpm, kill the env-v
 
 ### `uninstall-command` — `csub uninstall` / `npx claude-sub uninstall`
 
-**Status:** not-started
+**Status:** done
 
 **Outside-in:** Running `npx claude-sub uninstall` removes the rc-file line identified by the marker comment written by `setup`, uninstalls the global package, and confirms each step with the user. No-op cleanly if the marker line is absent or the global package isn't installed.
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { cmdOn, cmdOff, cmdStatus, cmdDoctor, cmdInstallSandbox, cmdSetup } from "./cli.js";
+import { cmdOn, cmdOff, cmdStatus, cmdDoctor, cmdInstallSandbox, cmdSetup, cmdUninstall } from "./cli.js";
 
 const [, , cmd, ...rest] = process.argv;
 
@@ -19,6 +19,14 @@ if (cmd === "install-sandbox") {
     process.exit(1);
   }
   result = await cmdSetup({ nonInteractive: rest.includes("--non-interactive") });
+} else if (cmd === "uninstall") {
+  const allowed = new Set(["--non-interactive"]);
+  const unexpected = rest.filter((arg) => !allowed.has(arg));
+  if (unexpected.length > 0) {
+    process.stderr.write(`csub: unexpected arguments: ${unexpected.join(" ")}\n`);
+    process.exit(1);
+  }
+  result = await cmdUninstall({ nonInteractive: rest.includes("--non-interactive") });
 } else {
   if (rest.length > 0) {
     process.stderr.write(`csub: unexpected arguments: ${rest.join(" ")}\n`);
@@ -33,7 +41,7 @@ if (cmd === "install-sandbox") {
   } else if (cmd === "doctor") {
     result = await cmdDoctor();
   } else {
-    process.stderr.write(`csub: unknown command: ${cmd ?? "(none)"}\nUsage: csub on|off|status|doctor|setup [--non-interactive]|install-sandbox <name>\n`);
+    process.stderr.write(`csub: unknown command: ${cmd ?? "(none)"}\nUsage: csub on|off|status|doctor|setup [--non-interactive]|uninstall [--non-interactive]|install-sandbox <name>\n`);
     process.exit(1);
   }
 }
