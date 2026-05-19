@@ -68,7 +68,7 @@ describe("parseArgs — supported flags", () => {
     ["--settings", "settings.json"],
     ["--agent", "reviewer"],
     ["--agents", "planner,reviewer"],
-  ])("accepts %s with value and forwards it", (flag, value) => {
+  ])("accepts %s with value and forwards it", (flag: string, value: string) => {
     const result = parseArgs(["-p", "hi", flag, value]);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -79,7 +79,7 @@ describe("parseArgs — supported flags", () => {
     "--dangerously-skip-permissions",
     "--strict-mcp-config",
     "--bare",
-  ])("accepts %s and forwards it", (flag) => {
+  ])("accepts %s and forwards it", (flag: string) => {
     const result = parseArgs(["-p", "hi", flag]);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -177,7 +177,7 @@ describe("parseArgs — supported flags", () => {
     ["--disallowed-tools", ["WebFetch", "Read"]],
     ["--tools", ["Bash", "Edit"]],
     ["--plugin-dir", ["plugins/a"]],
-  ])("accepts variadic %s and forwards its values", (flag, values) => {
+  ])("accepts variadic %s and forwards its values", (flag: string, values: string[]) => {
     const result = parseArgs(["-p", "hi", flag, ...values]);
     expect(result.ok).toBe(true);
     if (!result.ok) return;

@@ -6,7 +6,7 @@ Rename the package to `claude-sub`, switch dev + install to pnpm, kill the env-v
 
 ### `rename-and-pnpm` — Rename package and switch to pnpm
 
-**Status:** not-started
+**Status:** done
 
 **Outside-in:** `package.json` `name` is `claude-sub`; repo builds with `pnpm install && pnpm build`; `pnpm-lock.yaml` is tracked; `package-lock.json` is removed; `packageManager` field pins pnpm.
 
