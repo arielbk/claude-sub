@@ -21,20 +21,21 @@ afterEach(() => {
 describe("readState", () => {
   it("returns defaults when file is absent", async () => {
     const state = await readState();
-    expect(state).toEqual({ enabled: false, interceptCount: 0 });
+    expect(state).toEqual({ enabled: false, interceptCount: 0, bypassCount: 0 });
   });
 
   it("returns persisted values after a write", async () => {
-    await writeState({ enabled: true, interceptCount: 7 });
+    await writeState({ enabled: true, interceptCount: 7, bypassCount: 2 });
     const state = await readState();
-    expect(state).toEqual({ enabled: true, interceptCount: 7 });
+    expect(state).toEqual({ enabled: true, interceptCount: 7, bypassCount: 2 });
   });
 
   it("merges partial write — only touched fields change", async () => {
     await writeState({ enabled: true });
     await writeState({ interceptCount: 3 });
+    await writeState({ bypassCount: 1 });
     const state = await readState();
-    expect(state).toEqual({ enabled: true, interceptCount: 3 });
+    expect(state).toEqual({ enabled: true, interceptCount: 3, bypassCount: 1 });
   });
 
   it("returns defaults when file contains malformed JSON", async () => {
@@ -42,7 +43,7 @@ describe("readState", () => {
     mkdirSync(fp.replace(/\/[^/]+$/, ""), { recursive: true });
     writeFileSync(fp, "{ bad json %%% }");
     const state = await readState();
-    expect(state).toEqual({ enabled: false, interceptCount: 0 });
+    expect(state).toEqual({ enabled: false, interceptCount: 0, bypassCount: 0 });
   });
 
   it("returns defaults when file contains non-object JSON", async () => {
@@ -50,7 +51,7 @@ describe("readState", () => {
     mkdirSync(fp.replace(/\/[^/]+$/, ""), { recursive: true });
     writeFileSync(fp, "null");
     const state = await readState();
-    expect(state).toEqual({ enabled: false, interceptCount: 0 });
+    expect(state).toEqual({ enabled: false, interceptCount: 0, bypassCount: 0 });
   });
 });
 
@@ -61,12 +62,12 @@ describe("writeState", () => {
   });
 
   it("atomic write: no tmp file lingers and content is valid JSON", async () => {
-    await writeState({ enabled: false, interceptCount: 42 });
+    await writeState({ enabled: false, interceptCount: 42, bypassCount: 6 });
     const fp = stateFilePath();
     const dir = fp.replace(/\/[^/]+$/, "");
     const files = readdirSync(dir);
     expect(files.filter((f) => f.startsWith(".tmp-"))).toHaveLength(0);
     const parsed = JSON.parse(readFileSync(fp, "utf8"));
-    expect(parsed).toEqual({ enabled: false, interceptCount: 42 });
+    expect(parsed).toEqual({ enabled: false, interceptCount: 42, bypassCount: 6 });
   });
 });

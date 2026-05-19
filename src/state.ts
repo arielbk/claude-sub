@@ -7,9 +7,10 @@ import { randomBytes } from "node:crypto";
 export interface State {
   enabled: boolean;
   interceptCount: number;
+  bypassCount: number;
 }
 
-const DEFAULTS: State = { enabled: false, interceptCount: 0 };
+const DEFAULTS: State = { enabled: false, interceptCount: 0, bypassCount: 0 };
 
 export function stateFilePath(): string {
   const configHome = process.env.XDG_CONFIG_HOME ?? join(homedir(), ".config");
@@ -29,6 +30,7 @@ export async function readState(): Promise<State> {
       enabled: typeof parsed.enabled === "boolean" ? parsed.enabled : DEFAULTS.enabled,
       interceptCount:
         typeof parsed.interceptCount === "number" ? parsed.interceptCount : DEFAULTS.interceptCount,
+      bypassCount: typeof parsed.bypassCount === "number" ? parsed.bypassCount : DEFAULTS.bypassCount,
     };
   } catch {
     return { ...DEFAULTS };

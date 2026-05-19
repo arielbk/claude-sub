@@ -30,7 +30,7 @@ Expand `claude-plan-wrapper`'s flag allowlist to cover what orchestrators (ralph
 
 ### `state-bypass-count` — State gains bypassCount
 
-**Status:** not-started
+**Status:** done
 
 **Outside-in:** `readState()` returns `{ enabled, interceptCount, bypassCount }`; `writeState({ bypassCount: 1 })` persists alongside existing fields. Fresh state defaults `bypassCount` to `0`.
 
