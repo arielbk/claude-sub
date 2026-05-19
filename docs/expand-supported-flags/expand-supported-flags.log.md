@@ -1,3 +1,10 @@
+## `non-variadic-allowlist` — 2026-05-19 11:29:26
+
+**Status:** needs-review
+**Summary:** Added non-variadic allowlist support for `--append-system-prompt`, `--system-prompt`, `--permission-mode`, `--settings`, `--agent`, `--agents`, `--dangerously-skip-permissions`, `--strict-mcp-config`, and `--bare`. Value flags now forward their following value, bool flags forward as standalone args, and the supported-flags error guidance includes the full updated allowlist.
+**Deviations:** The requested `/implement` resource files (`tdd-loop.md` and `log-format.md`) were not present under the configured skill directories; I followed the local TDD skill and the existing log entry format. Commit could not be created because this sandbox cannot write under `.git` (`git add` failed creating `.git/index.lock` with `Operation not permitted`; direct `touch .git/...` failed the same way).
+**Handoff:** `npm test -- --run src/__tests__/flag-mapper.test.ts` passes with 35 tests, and `npm run build` passes. Code changes are implemented but unstaged and uncommitted due the `.git` metadata write restriction.
+
 ## `variadic-allowlist` — 2026-05-19 10:52:02
 
 **Status:** done

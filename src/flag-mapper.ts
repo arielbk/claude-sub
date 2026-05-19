@@ -12,8 +12,23 @@ export interface ParseFailure {
 
 export type FlagMapResult = ParseSuccess | ParseFailure;
 
-const SUPPORTED_VALUE_FLAGS = new Set(["--model", "-m"]);
-const SUPPORTED_BOOL_FLAGS = new Set(["--verbose", "-v"]);
+const SUPPORTED_VALUE_FLAGS = new Set([
+  "--model",
+  "-m",
+  "--append-system-prompt",
+  "--system-prompt",
+  "--permission-mode",
+  "--settings",
+  "--agent",
+  "--agents",
+]);
+const SUPPORTED_BOOL_FLAGS = new Set([
+  "--verbose",
+  "-v",
+  "--dangerously-skip-permissions",
+  "--strict-mcp-config",
+  "--bare",
+]);
 const SUPPORTED_VARIADIC_FLAGS = new Set([
   "--add-dir",
   "--mcp-config",
@@ -33,7 +48,25 @@ const UNSUPPORTED_FLAGS = [
   "--no-markdown",
 ];
 
-export const SUPPORTED_FLAGS_LIST = ["--model (-m)", "--verbose (-v)"];
+export const SUPPORTED_FLAGS_LIST = [
+  "--model (-m)",
+  "--verbose (-v)",
+  "--append-system-prompt",
+  "--system-prompt",
+  "--permission-mode",
+  "--dangerously-skip-permissions",
+  "--settings",
+  "--agent",
+  "--agents",
+  "--strict-mcp-config",
+  "--bare",
+  "--add-dir",
+  "--mcp-config",
+  "--allowedTools/--allowed-tools",
+  "--disallowedTools/--disallowed-tools",
+  "--tools",
+  "--plugin-dir",
+];
 
 export function parseArgs(args: string[]): FlagMapResult {
   let prompt: string | undefined;

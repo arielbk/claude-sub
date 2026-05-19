@@ -61,6 +61,52 @@ describe("parseArgs — supported flags", () => {
     expect(result.passthroughArgs).toEqual(["-v"]);
   });
 
+  it.each([
+    ["--append-system-prompt", "extra"],
+    ["--system-prompt", "system"],
+    ["--permission-mode", "acceptEdits"],
+    ["--settings", "settings.json"],
+    ["--agent", "reviewer"],
+    ["--agents", "planner,reviewer"],
+  ])("accepts %s with value and forwards it", (flag, value) => {
+    const result = parseArgs(["-p", "hi", flag, value]);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.passthroughArgs).toEqual([flag, value]);
+  });
+
+  it.each([
+    "--dangerously-skip-permissions",
+    "--strict-mcp-config",
+    "--bare",
+  ])("accepts %s and forwards it", (flag) => {
+    const result = parseArgs(["-p", "hi", flag]);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.passthroughArgs).toEqual([flag]);
+  });
+
+  it("accepts orchestrator non-variadic flags together and forwards them in order", () => {
+    const result = parseArgs([
+      "-p",
+      "hi",
+      "--append-system-prompt",
+      "extra",
+      "--permission-mode",
+      "acceptEdits",
+      "--bare",
+    ]);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.passthroughArgs).toEqual([
+      "--append-system-prompt",
+      "extra",
+      "--permission-mode",
+      "acceptEdits",
+      "--bare",
+    ]);
+  });
+
   it("accepts variadic --add-dir with one value", () => {
     const result = parseArgs(["-p", "hi", "--add-dir", "src"]);
     expect(result.ok).toBe(true);
@@ -151,7 +197,29 @@ describe("parseArgs — unsupported flags", () => {
     const result = parseArgs(["-p", "hi", "--output-format", "json"]);
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    for (const flag of SUPPORTED_FLAGS_LIST) {
+
+    const expectedSupportedFlags = [
+      "--model (-m)",
+      "--verbose (-v)",
+      "--append-system-prompt",
+      "--system-prompt",
+      "--permission-mode",
+      "--dangerously-skip-permissions",
+      "--settings",
+      "--agent",
+      "--agents",
+      "--strict-mcp-config",
+      "--bare",
+      "--add-dir",
+      "--mcp-config",
+      "--allowedTools/--allowed-tools",
+      "--disallowedTools/--disallowed-tools",
+      "--tools",
+      "--plugin-dir",
+    ];
+
+    expect(SUPPORTED_FLAGS_LIST).toEqual(expectedSupportedFlags);
+    for (const flag of expectedSupportedFlags) {
       expect(result.error).toContain(flag);
     }
   });

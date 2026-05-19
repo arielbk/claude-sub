@@ -6,7 +6,7 @@ Expand `claude-plan-wrapper`'s flag allowlist to cover what orchestrators (ralph
 
 ### `non-variadic-allowlist` — Non-variadic allowlist additions
 
-**Status:** not-started
+**Status:** done
 
 **Outside-in:** `CLAUDE_USE_SUB=1 claude -p "prompt" --append-system-prompt "extra" --permission-mode acceptEdits --bare` parses successfully and forwards the flags to the spawned interactive `claude`.
 
