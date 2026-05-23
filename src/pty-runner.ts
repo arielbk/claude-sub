@@ -1,4 +1,3 @@
-import * as pty from "node-pty";
 import { resolveRealClaude } from "./real-claude-resolver.js";
 import { SENTINEL, SENTINEL_SYSTEM_PROMPT, extractReply } from "./output-extractor.js";
 
@@ -32,9 +31,6 @@ export interface PtyRunOptions {
   spawner?: PtySpawner;
 }
 
-const defaultSpawner: PtySpawner = (cmd, args, opts) =>
-  pty.spawn(cmd, args, opts) as unknown as IMinimalPty;
-
 export async function runUnderPty(
   prompt: string,
   passthroughArgs: string[],
@@ -48,6 +44,10 @@ export async function runUnderPty(
     spawner,
   } = opts ?? {};
 
+  // Lazy-load so passthrough invocations never touch the native module.
+  const pty = spawner === undefined ? await import("node-pty") : null;
+  const defaultSpawner: PtySpawner = (cmd, args, opts) =>
+    pty!.spawn(cmd, args, opts) as unknown as IMinimalPty;
   const actualSpawner = spawner ?? defaultSpawner;
   const startTime = Date.now();
   const cmd = spawner !== undefined ? "" : resolveRealClaude();
