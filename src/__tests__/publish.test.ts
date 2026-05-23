@@ -4,7 +4,8 @@ import { join } from "path";
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 
 const PROJECT_ROOT = join(import.meta.dirname, "../..");
-const TARBALL_NAME = "claude-sub-0.1.0.tgz";
+const pkg = JSON.parse(readFileSync(join(PROJECT_ROOT, "package.json"), "utf8"));
+const TARBALL_NAME = `claude-sub-${pkg.version}.tgz`;
 const TARBALL_PATH = join(PROJECT_ROOT, TARBALL_NAME);
 
 describe("publish-prep", () => {
