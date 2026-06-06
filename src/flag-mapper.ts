@@ -3,6 +3,7 @@ export interface ParseSuccess {
   prompt: string;
   passthroughArgs: string[];
   isPrintMode: boolean;
+  outputFormat?: "stream-json";
 }
 
 export interface ParseFailure {
@@ -41,12 +42,7 @@ const SUPPORTED_VARIADIC_FLAGS = new Set([
 ]);
 const PRINT_FLAGS = new Set(["-p", "--print"]);
 
-const UNSUPPORTED_FLAGS = [
-  "--output-format",
-  "--resume",
-  "--json",
-  "--no-markdown",
-];
+const UNSUPPORTED_FLAGS = ["--resume", "--json", "--no-markdown"];
 
 export const SUPPORTED_FLAGS_LIST = [
   "--model (-m)",
@@ -66,12 +62,14 @@ export const SUPPORTED_FLAGS_LIST = [
   "--disallowedTools/--disallowed-tools",
   "--tools",
   "--plugin-dir",
+  "--output-format stream-json",
 ];
 
 export function parseArgs(args: string[]): FlagMapResult {
   let prompt: string | undefined;
   const passthroughArgs: string[] = [];
   let isPrintMode = false;
+  let outputFormat: "stream-json" | undefined;
   let i = 0;
 
   while (i < args.length) {
@@ -87,6 +85,24 @@ export function parseArgs(args: string[]): FlagMapResult {
           `Flag "${unsupported}" is not supported in plan mode.\n` +
           `Supported flags: ${SUPPORTED_FLAGS_LIST.join(", ")}`,
       };
+    }
+
+    if (arg === "--output-format" || arg.startsWith("--output-format=")) {
+      const value = arg.includes("=") ? arg.slice(arg.indexOf("=") + 1) : args[i + 1];
+      if (!value) {
+        return { ok: false, error: `Flag --output-format requires a value` };
+      }
+      if (value !== "stream-json") {
+        return {
+          ok: false,
+          error:
+            `Flag "--output-format" only supports stream-json in plan mode.\n` +
+            `Supported flags: ${SUPPORTED_FLAGS_LIST.join(", ")}`,
+        };
+      }
+      outputFormat = "stream-json";
+      i += arg.includes("=") ? 1 : 2;
+      continue;
     }
 
     if (PRINT_FLAGS.has(arg)) {
@@ -153,5 +169,5 @@ export function parseArgs(args: string[]): FlagMapResult {
     };
   }
 
-  return { ok: true, prompt, passthroughArgs, isPrintMode };
+  return { ok: true, prompt, passthroughArgs, isPrintMode, outputFormat };
 }

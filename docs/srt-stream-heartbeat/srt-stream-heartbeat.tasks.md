@@ -9,7 +9,7 @@ plan instead of the API.
 
 ### `stream-json-output` — Route stream-json through the plan and emit a parseable stream
 
-**Status:** not-started
+**Status:** done
 
 **Outside-in:** `claude -p --output-format stream-json "say OK"` under `csub on` exits 0 and prints NDJSON whose final `result` event's `.result` is the clean reply (and an `assistant` event whose `.message.content[].text` carries it) — no "will bill against API" bypass warning.
 

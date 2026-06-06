@@ -127,7 +127,7 @@ describe("maybeRunFailOpenBypass (mocked real claude exec)", () => {
     const writeStderr = vi.fn();
 
     const result = await maybeRunFailOpenBypass(
-      ["-p", "prompt", "--output-format", "stream-json"],
+      ["-p", "prompt", "--output-format", "json"],
       {
         resolveRealClaude,
         spawnSync,
@@ -140,7 +140,7 @@ describe("maybeRunFailOpenBypass (mocked real claude exec)", () => {
     expect(resolveRealClaude).toHaveBeenCalledOnce();
     expect(spawnSync).toHaveBeenCalledWith(
       "/usr/local/bin/claude",
-      ["-p", "prompt", "--output-format", "stream-json"],
+      ["-p", "prompt", "--output-format", "json"],
       { stdio: "inherit", env: { CLAUDE_USE_SUB: "1" } }
     );
     expect(writeStderr).toHaveBeenCalledWith(
@@ -150,14 +150,19 @@ describe("maybeRunFailOpenBypass (mocked real claude exec)", () => {
   });
 
   it("leaves allowlisted plan-mode invocations on the PTY path without incrementing bypassCount", async () => {
-    const result = await maybeRunFailOpenBypass(["-p", "prompt", "--model", "sonnet"], {
-      resolveRealClaude: vi.fn(),
-      spawnSync: vi.fn(),
-      writeStderr: vi.fn(),
-      env: { CLAUDE_USE_SUB: "1" },
-    });
+    for (const args of [
+      ["-p", "prompt", "--model", "sonnet"],
+      ["-p", "prompt", "--output-format", "stream-json"],
+    ]) {
+      const result = await maybeRunFailOpenBypass(args, {
+        resolveRealClaude: vi.fn(),
+        spawnSync: vi.fn(),
+        writeStderr: vi.fn(),
+        env: { CLAUDE_USE_SUB: "1" },
+      });
 
-    expect(result).toEqual({ bypassed: false });
+      expect(result).toEqual({ bypassed: false });
+    }
     expect(readState).not.toHaveBeenCalled();
     expect(writeState).not.toHaveBeenCalled();
   });
@@ -184,6 +189,62 @@ describe("shim plan-mode branch (CLAUDE_USE_SUB=1)", () => {
     120000
   );
 
+  it("stream-json output emits assistant and result events without fail-open warning", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "shim-stream-json-"));
+    try {
+      const realDir = join(tmp, "bin");
+      const configHome = join(tmp, "config");
+      mkdirSync(realDir);
+      mkdirSync(join(configHome, "claude-sub"), { recursive: true });
+      writeFileSync(
+        join(configHome, "claude-sub", "state.json"),
+        JSON.stringify({ enabled: true, interceptCount: 0, bypassCount: 0 })
+      );
+      writeFileSync(
+        join(realDir, "claude"),
+        "#!/bin/sh\necho OK\necho __PLAN_MODE_DONE_7a3b9f__\n"
+      );
+      chmodSync(join(realDir, "claude"), 0o755);
+
+      const result = spawnSync(
+        "node",
+        [shimBin, "-p", "hello", "--output-format", "stream-json"],
+        {
+          encoding: "utf8",
+          timeout: 15000,
+          env: {
+            ...process.env,
+            CLAUDE_USE_SUB: "1",
+            XDG_CONFIG_HOME: configHome,
+            PATH: `${realDir}:${process.env.PATH ?? ""}`,
+          },
+        }
+      );
+
+      const events = result.stdout
+        .trim()
+        .split("\n")
+        .map((line) => JSON.parse(line) as {
+          type: string;
+          result?: string;
+          message?: { content: Array<{ type: string; text: string }> };
+        });
+
+      expect(result.status).toBe(0);
+      expect(result.stderr).not.toContain("will bill against API");
+      expect(events.find((event) => event.type === "assistant")?.message?.content[0]).toEqual({
+        type: "text",
+        text: "OK",
+      });
+      expect(events.find((event) => event.type === "result")?.result).toBe("OK");
+      expect(
+        JSON.parse(readFileSync(join(configHome, "claude-sub", "state.json"), "utf8"))
+      ).toMatchObject({ bypassCount: 0, interceptCount: 1 });
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
   it("fail-open flag warns, increments bypassCount, and passes original argv to real claude", () => {
     const tmp = mkdtempSync(join(tmpdir(), "shim-fail-open-"));
     try {
@@ -206,7 +267,7 @@ describe("shim plan-mode branch (CLAUDE_USE_SUB=1)", () => {
 
       const result = spawnSync(
         "node",
-        [shimBin, "-p", "hello", "--output-format", "stream-json"],
+        [shimBin, "-p", "hello", "--output-format", "json"],
         {
           encoding: "utf8",
           timeout: 15000,
@@ -227,7 +288,7 @@ describe("shim plan-mode branch (CLAUDE_USE_SUB=1)", () => {
         "-p",
         "hello",
         "--output-format",
-        "stream-json",
+        "json",
       ]);
       expect(
         JSON.parse(readFileSync(join(configHome, "claude-sub", "state.json"), "utf8"))

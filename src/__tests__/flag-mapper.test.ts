@@ -183,10 +183,25 @@ describe("parseArgs — supported flags", () => {
     if (!result.ok) return;
     expect(result.passthroughArgs).toEqual([flag, ...values]);
   });
+
+  it("accepts --output-format stream-json and records stream-json mode without forwarding it", () => {
+    const result = parseArgs(["-p", "hi", "--output-format", "stream-json"]);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.outputFormat).toBe("stream-json");
+    expect(result.passthroughArgs).toEqual([]);
+  });
+
+  it("accepts --output-format=stream-json and records stream-json mode", () => {
+    const result = parseArgs(["-p", "hi", "--output-format=stream-json"]);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.outputFormat).toBe("stream-json");
+  });
 });
 
 describe("parseArgs — unsupported flags", () => {
-  it("rejects --output-format with error naming the flag", () => {
+  it("rejects --output-format values other than stream-json with error naming the flag", () => {
     const result = parseArgs(["-p", "hi", "--output-format", "json"]);
     expect(result.ok).toBe(false);
     if (result.ok) return;
@@ -216,6 +231,7 @@ describe("parseArgs — unsupported flags", () => {
       "--disallowedTools/--disallowed-tools",
       "--tools",
       "--plugin-dir",
+      "--output-format stream-json",
     ];
 
     expect(SUPPORTED_FLAGS_LIST).toEqual(expectedSupportedFlags);

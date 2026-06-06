@@ -6,6 +6,7 @@ import { runUnderPty } from "./pty-runner.js";
 import { formatDiagnostic } from "./diagnostic-formatter.js";
 import { readState } from "./state.js";
 import { resolveUsePty, incrementInterceptCount, maybeRunFailOpenBypass } from "./shim-logic.js";
+import { emitStreamJsonResult } from "./stream-json-emitter.js";
 
 const args = process.argv.slice(2);
 const state = await readState();
@@ -37,7 +38,11 @@ if (usePlan && hasPrintFlag) {
       process.exit(124);
     }
     await incrementInterceptCount();
-    process.stdout.write(result.reply + "\n");
+    process.stdout.write(
+      parsed.outputFormat === "stream-json"
+        ? emitStreamJsonResult(result.reply)
+        : `${result.reply}\n`
+    );
     process.exit(result.exitCode);
   } catch (err) {
     process.stderr.write(`claude-plan-wrapper: PTY error: ${err}\n`);
