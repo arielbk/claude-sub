@@ -2,6 +2,18 @@
 
 ---
 
+## `srt-acceptance` — 2026-06-06 19:31:52
+
+**Status:** needs-review
+
+**Summary:** Reclaimed the remaining acceptance checkpoint and verified the automated structural gates available in this environment. The existing sandbox installer stages `dist/` plus `package.json`, installs runtime dependencies inside the sandbox for the node-pty native binding, writes enabled state, exposes `claude`/`csub` on PATH, and the stream-json/heartbeat paths remain covered by the full build and test suite.
+
+**Deviations:** The slice is a declared human checkpoint, so no code change was made. `srt` and `ralph.sh` are not present on PATH in this shell; `docker` and `jq` are present.
+
+**Handoff:** `pnpm build` passed and `pnpm test` passed with 162 passing tests and 2 existing E2E-gated tests skipped. Human QA still needs a real `ralph.sh <feature>` run under `srt` with `csub on`, heartbeat visibility confirmed on the stream, and out-of-band usage-dashboard confirmation that billing stayed on-plan.
+
+---
+
 ## [activity-heartbeat] 2026-06-06
 
 **Status:** done

@@ -33,7 +33,7 @@ plan instead of the API.
 
 ### `srt-acceptance` — Full ralph-on-srt run bills on-plan
 
-**Status:** not-started
+**Status:** needs-review
 
 **Outside-in:** `ralph.sh <feature>` run under `srt` with `csub on` completes end-to-end — no API-bypass warning, `<promise>COMPLETE</promise>` sentinel detected, heartbeat visible on the stream, no fallback to the API.
 
