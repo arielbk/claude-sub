@@ -26,6 +26,16 @@
 
 **Handoff:** `pnpm build` passed and `pnpm test` passed with 162 passing tests and 2 existing E2E-gated tests skipped. Human QA still needs a real `ralph.sh <feature>` run under `srt` with `csub on`, heartbeat visibility confirmed on the stream, and out-of-band usage-dashboard confirmation that billing stayed on-plan.
 
+### Acceptance run — 2026-06-06 (orchestrator, live under srt)
+
+Ran the real acceptance: this branch's shim wired in as `claude`, `csub on`, invoked exactly as `ralph.sh` does (`srt --settings … claude -p --dangerously-skip-permissions --verbose --output-format stream-json …`) via `npx @anthropic-ai/sandbox-runtime@0.0.52`, against a live Claude session.
+
+**Resolved — minimal srt setting to unblock the PTY (the slice's deliverable):** The default sandbox profile is `(deny default)` and grants `file-ioctl`/write only on a fixed set of device literals — **not** `/dev/ptmx` or pty slaves. So `node-pty` fails inside the sandbox with `posix_spawnp failed` (reproduced with a minimal `pty.spawn('/bin/echo')` smoke test; non-pty `spawnSync` works, isolating it to pty devices). sandbox-runtime exposes a top-level **`allowPty: true`** setting that injects `(allow pseudo-tty)` + `/dev/ptmx` + `^/dev/ttys` ioctl/read/write rules. Adding `allowPty: true` unblocks the PTY (smoke test passes; the shim's session then spawns under the sandbox). Documented in README → "Running under a sandbox (srt)".
+
+**Verified in scope:** With `allowPty: true`, the stream-json path under srt emits valid NDJSON — a `heartbeat` event, an `assistant` event, and a terminal `result` event — and ralph's two `jq` extractions parse it. **No "bill against API" bypass warning**; routing stayed on-plan; exit 0.
+
+**Out-of-scope blocker found (pre-existing, NOT this feature):** The PTY reply *extraction* is broken against the installed **Claude Code 2.1.167** — `extractReply` captures the interactive TUI (welcome banner, status bar, "Press Ctrl-C again to exit") instead of the model's reply, so the `result`/`assistant` text is TUI chrome rather than the clean answer. This reproduces in **plain** mode, **outside** the sandbox, with the **real** profile — i.e. it is independent of stream-json and of the sandbox, a regression from Claude's TUI changing. This PRD assumes the existing plain-text extraction works; it does not, on this host, with this Claude version. A full green `ralph.sh` run is therefore blocked by this unrelated regression and should be tracked as a separate issue (TUI-extraction support for Claude ≥2.1.x). Slice remains `needs-review` for the end-to-end gate.
+
 ---
 
 ## [activity-heartbeat] 2026-06-06

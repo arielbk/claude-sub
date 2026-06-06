@@ -86,6 +86,22 @@ These shapes satisfy the `jq` filters a stream-json consumer (e.g. `ralph.sh`) u
 
 Only `stream-json` is supported. Other `--output-format` values (e.g. `json`) still exit non-zero with a message; on timeout/idle failure the shim writes a diagnostic to stderr and exits non-zero, as in plain mode.
 
+## Running under a sandbox (srt)
+
+`claude-sub` is designed to run inside Anthropic's [sandbox-runtime](https://github.com/anthropic-experimental/sandbox-runtime) (`srt`) — e.g. when `ralph.sh` wraps each iteration's `claude` call. Because the shim drives interactive Claude through a **pseudo-terminal**, the sandbox must grant pty access. The default sandbox profile denies `/dev/ptmx` and pty slave devices, so `node-pty` fails with `posix_spawnp failed` / `PTY error`.
+
+Add **`allowPty: true`** to your `srt` settings file (alongside `filesystem` and `network`):
+
+```json
+{
+  "allowPty": true,
+  "filesystem": { "...": "..." },
+  "network": { "allowedDomains": ["*.anthropic.com", "anthropic.com"], "...": "..." }
+}
+```
+
+The sandbox also needs write access to wherever interactive Claude persists session state — typically `~/.claude` and `~/.claude.json` — plus the usual temp directories. With those granted and `allowPty: true`, the shim's pty session spawns under the sandbox and stream-json routes on-plan (no API-bypass warning).
+
 ## Known limitations
 
 The following flags and features are **not supported** when routing is on:
