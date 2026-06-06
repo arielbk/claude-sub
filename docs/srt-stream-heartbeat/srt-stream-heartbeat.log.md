@@ -2,6 +2,20 @@
 
 ---
 
+## [docs-prime-time] 2026-06-06
+
+**Status:** done
+
+**What was implemented:**
+- Removed the stale `--output-format` (streaming JSON) entry from the README "Known limitations" section; the remaining `--output-format json` / `--json` limitations now accurately reflect that only `stream-json` is emulated
+- Added a "Streaming JSON output" section documenting the emulated NDJSON stream, an example invocation, the three event types (`heartbeat`, `assistant`, `result`) with their exact shapes, the ~10s activity-gated heartbeat semantics, and the `jq` filters that consumers (ralph) use
+- Added an `--output-format stream-json` row to the supported-flags table, noting it is consumed by the shim rather than forwarded
+
+**Feedback loop result:** Human review. Verified the documented event shapes against `src/stream-json-emitter.ts`, the heartbeat default (`heartbeatIntervalMs = 10000`, fires only when bytes arrived) against `src/pty-runner.ts`, and the supported/unsupported `--output-format` behavior against `src/flag-mapper.ts`. `pnpm build` and `pnpm test` remain green (160 passing, 2 E2E-gated skipped) — docs-only change, no code touched.
+
+**Notes:**
+- Slice taken over by the orchestrator (Claude) directly rather than a ralph-codex iteration; the implementation slices were delegated to the Codex loop.
+
 ## `srt-acceptance` — 2026-06-06 19:31:52
 
 **Status:** needs-review

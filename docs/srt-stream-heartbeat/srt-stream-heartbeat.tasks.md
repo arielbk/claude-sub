@@ -45,12 +45,7 @@ plan instead of the API.
 
 ### `docs-prime-time` — README matches reality
 
-**Status:** needs-review
-
-<!-- RESERVED: the orchestrator (Claude) owns this slice and will implement it
-     directly after the ralph-codex loop finishes the implementation slices.
-     Held as needs-review so the loop treats it as settled and steps past it. -->
-
+**Status:** done
 
 **Outside-in:** README no longer lists `--output-format stream-json` under "Known limitations"; it documents stream-json support, the heartbeat behavior, and what events are emitted.
 
