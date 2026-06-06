@@ -188,7 +188,7 @@ describe("parseArgs — supported flags", () => {
     const result = parseArgs(["-p", "hi", "--output-format", "stream-json"]);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.outputFormat).toBe("stream-json");
+    expect(result.outputMode).toBe("stream-json");
     expect(result.passthroughArgs).toEqual([]);
   });
 
@@ -196,7 +196,14 @@ describe("parseArgs — supported flags", () => {
     const result = parseArgs(["-p", "hi", "--output-format=stream-json"]);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.outputFormat).toBe("stream-json");
+    expect(result.outputMode).toBe("stream-json");
+  });
+
+  it("defaults outputMode to plain when --output-format is absent", () => {
+    const result = parseArgs(["-p", "hi"]);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.outputMode).toBe("plain");
   });
 });
 

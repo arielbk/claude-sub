@@ -1,9 +1,15 @@
+import {
+  parseOutputMode,
+  resolvedOutputMode,
+  type OutputMode,
+} from "./output-mode-parser.js";
+
 export interface ParseSuccess {
   ok: true;
   prompt: string;
   passthroughArgs: string[];
   isPrintMode: boolean;
-  outputFormat?: "stream-json";
+  outputMode: OutputMode;
 }
 
 export interface ParseFailure {
@@ -66,10 +72,23 @@ export const SUPPORTED_FLAGS_LIST = [
 ];
 
 export function parseArgs(args: string[]): FlagMapResult {
+  const outputModeParse = parseOutputMode(args);
+  if (outputModeParse.kind === "missing-value") {
+    return { ok: false, error: `Flag --output-format requires a value` };
+  }
+  if (outputModeParse.kind === "unsupported") {
+    return {
+      ok: false,
+      error:
+        `Flag "--output-format" only supports stream-json in plan mode.\n` +
+        `Supported flags: ${SUPPORTED_FLAGS_LIST.join(", ")}`,
+    };
+  }
+  const outputMode = resolvedOutputMode(outputModeParse);
+
   let prompt: string | undefined;
   const passthroughArgs: string[] = [];
   let isPrintMode = false;
-  let outputFormat: "stream-json" | undefined;
   let i = 0;
 
   while (i < args.length) {
@@ -88,19 +107,8 @@ export function parseArgs(args: string[]): FlagMapResult {
     }
 
     if (arg === "--output-format" || arg.startsWith("--output-format=")) {
-      const value = arg.includes("=") ? arg.slice(arg.indexOf("=") + 1) : args[i + 1];
-      if (!value) {
-        return { ok: false, error: `Flag --output-format requires a value` };
-      }
-      if (value !== "stream-json") {
-        return {
-          ok: false,
-          error:
-            `Flag "--output-format" only supports stream-json in plan mode.\n` +
-            `Supported flags: ${SUPPORTED_FLAGS_LIST.join(", ")}`,
-        };
-      }
-      outputFormat = "stream-json";
+      // Value already validated by parseOutputMode above; here we only skip the
+      // flag (and its value, in the space form) so it isn't forwarded to claude.
       i += arg.includes("=") ? 1 : 2;
       continue;
     }
@@ -169,5 +177,5 @@ export function parseArgs(args: string[]): FlagMapResult {
     };
   }
 
-  return { ok: true, prompt, passthroughArgs, isPrintMode, outputFormat };
+  return { ok: true, prompt, passthroughArgs, isPrintMode, outputMode };
 }
