@@ -1,6 +1,7 @@
 import { afterEach, describe, it, expect, vi } from "vitest";
 import { runUnderPty, IMinimalPty, PtySpawner } from "../pty-runner.js";
 import { formatDiagnostic } from "../diagnostic-formatter.js";
+import { SENTINEL } from "../output-extractor.js";
 
 class FakePty implements IMinimalPty {
   private dataCbs: ((data: string) => void)[] = [];
@@ -74,6 +75,92 @@ describe("runUnderPty — activity heartbeat", () => {
     fake.exit(0);
     await expect(resultPromise).resolves.toMatchObject({ ok: true });
   });
+});
+
+describe("runUnderPty — transcript-driven happy path", () => {
+  it(
+    "resolves with the clean reply once the transcript carries the sentinel",
+    async () => {
+      const fake = new FakePty();
+      let transcript: string | null = null;
+      const p = runUnderPty("what is 2 plus 2?", [], {
+        initialDelayMs: 0,
+        settleMs: 30000,
+        idleTimeoutMs: 30000,
+        maxMs: 30000,
+        pollIntervalMs: 10,
+        spawner: makeSpawner(fake),
+        readTranscript: () => transcript,
+      });
+      // Terminal emits chrome (which must NOT leak into the reply).
+      fake.emit("\x1b[2J╭── Claude Code v2.1.167 ──╮ welcome");
+      // Then the transcript gains the completed assistant turn.
+      setTimeout(() => {
+        transcript = JSON.stringify({
+          type: "assistant",
+          message: { role: "assistant", content: [{ type: "text", text: `4.\n${SENTINEL}` }] },
+        });
+      }, 30);
+      const result = await p;
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.reply).toBe("4.");
+        expect(result.reply).not.toContain("Claude Code");
+        expect(result.reply).not.toContain(SENTINEL);
+      }
+    },
+    2000
+  );
+
+  it(
+    "pins the provided session id into the spawn args as --session-id",
+    async () => {
+      const fake = new FakePty();
+      let captured: string[] = [];
+      const spawner: PtySpawner = (_cmd, args) => {
+        captured = args;
+        return fake;
+      };
+      const p = runUnderPty("hi", [], {
+        initialDelayMs: 0,
+        maxMs: 60,
+        idleTimeoutMs: 30000,
+        settleMs: 30000,
+        spawner,
+        sessionId: "fixed-session-123",
+        readTranscript: () => null,
+      });
+      await p;
+      expect(captured).toContain("--session-id");
+      expect(captured[captured.indexOf("--session-id") + 1]).toBe("fixed-session-123");
+    },
+    2000
+  );
+
+  it(
+    "submits the prompt followed by a carriage return (Enter), not a line feed",
+    async () => {
+      const fake = new FakePty();
+      const writes: string[] = [];
+      const origWrite = fake.write.bind(fake);
+      fake.write = (d: string) => {
+        writes.push(d);
+        origWrite(d);
+      };
+      const p = runUnderPty("hello world", [], {
+        initialDelayMs: 0,
+        maxMs: 80,
+        idleTimeoutMs: 30000,
+        settleMs: 30000,
+        spawner: makeSpawner(fake),
+        readTranscript: () => null,
+      });
+      await p;
+      expect(writes).toContain("hello world\r");
+      expect(writes).not.toContain("hello world\n");
+    },
+    2000
+  );
 });
 
 describe("runUnderPty — overall timeout", () => {

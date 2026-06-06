@@ -1,5 +1,18 @@
 import { describe, it, expect } from "vitest";
-import { extractReply, stripAnsi, SENTINEL } from "../output-extractor.js";
+import {
+  extractReply,
+  extractReplyFromTranscript,
+  stripAnsi,
+  SENTINEL,
+} from "../output-extractor.js";
+
+/** Build a JSONL transcript line for an assistant turn with block content. */
+function assistantLine(text: string): string {
+  return JSON.stringify({
+    type: "assistant",
+    message: { role: "assistant", content: [{ type: "text", text }] },
+  });
+}
 
 describe("stripAnsi", () => {
   it("passes plain text through unchanged", () => {
@@ -75,5 +88,83 @@ describe("extractReply", () => {
     const result = extractReply(raw);
     expect(result.found).toBe(true);
     expect(result.reply).toBe("line one\nline two\nline three");
+  });
+});
+
+describe("extractReplyFromTranscript", () => {
+  const userLine = JSON.stringify({
+    type: "user",
+    message: { role: "user", content: "What is 2 plus 2?" },
+  });
+
+  it("extracts clean reply from the assistant turn carrying the sentinel", () => {
+    const jsonl = [userLine, assistantLine(`2 plus 2 equals 4.\n\n${SENTINEL}`)].join("\n");
+    const result = extractReplyFromTranscript(jsonl);
+    expect(result.found).toBe(true);
+    expect(result.reply).toBe("2 plus 2 equals 4.");
+  });
+
+  it("preserves the sentinel's double-underscores (transcript stores raw text)", () => {
+    // The terminal buffer renders __...__ as markdown bold and drops the
+    // underscores; the transcript does not, so matching works here.
+    const jsonl = assistantLine(`Paris.\n${SENTINEL}`);
+    expect(extractReplyFromTranscript(jsonl).reply).toBe("Paris.");
+  });
+
+  it("takes the last assistant turn with the sentinel, ignoring earlier turns", () => {
+    const jsonl = [
+      assistantLine("Let me check that for you."),
+      JSON.stringify({ type: "user", message: { role: "user", content: "[tool result]" } }),
+      assistantLine(`The final answer is 42.\n${SENTINEL}`),
+    ].join("\n");
+    const result = extractReplyFromTranscript(jsonl);
+    expect(result.found).toBe(true);
+    expect(result.reply).toBe("The final answer is 42.");
+  });
+
+  it("handles string content (not just block arrays)", () => {
+    const jsonl = JSON.stringify({
+      type: "assistant",
+      message: { role: "assistant", content: `Hello there.\n${SENTINEL}` },
+    });
+    expect(extractReplyFromTranscript(jsonl).reply).toBe("Hello there.");
+  });
+
+  it("skips partial/unparseable trailing lines while streaming", () => {
+    const jsonl = [assistantLine(`Done.\n${SENTINEL}`), '{"type":"assist'].join("\n");
+    expect(extractReplyFromTranscript(jsonl).found).toBe(true);
+    expect(extractReplyFromTranscript(jsonl).reply).toBe("Done.");
+  });
+
+  it("falls back to the last assistant text when no sentinel is present", () => {
+    const jsonl = [userLine, assistantLine("Partial answer so far")].join("\n");
+    const result = extractReplyFromTranscript(jsonl);
+    expect(result.found).toBe(false);
+    expect(result.reply).toBe("Partial answer so far");
+  });
+
+  it("returns an empty result when there are no assistant turns yet", () => {
+    const jsonl = [
+      JSON.stringify({ type: "mode" }),
+      userLine,
+      JSON.stringify({ type: "attachment" }),
+    ].join("\n");
+    const result = extractReplyFromTranscript(jsonl);
+    expect(result.found).toBe(false);
+    expect(result.reply).toBe("");
+  });
+
+  it("ignores non-text content blocks (e.g. tool_use) when joining", () => {
+    const jsonl = JSON.stringify({
+      type: "assistant",
+      message: {
+        role: "assistant",
+        content: [
+          { type: "tool_use", id: "x", name: "Read", input: {} },
+          { type: "text", text: `Answer.\n${SENTINEL}` },
+        ],
+      },
+    });
+    expect(extractReplyFromTranscript(jsonl).reply).toBe("Answer.");
   });
 });
