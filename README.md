@@ -61,14 +61,52 @@ When routing is enabled, the following flags are forwarded to the interactive se
 | `--disallowedTools` / `--disallowed-tools` | Tool denylist (variadic) |
 | `--tools` | Tool list (variadic) |
 | `--plugin-dir` | Plugin directories (variadic) |
+| `--output-format stream-json` | Emit a Claude-compatible NDJSON event stream — consumed by the shim, not forwarded (see [Streaming JSON output](#streaming-json-output)) |
 
 Any other flag causes the shim to exit non-zero with a message naming the unsupported flag and listing what's accepted.
+
+## Streaming JSON output
+
+`claude -p --output-format stream-json` is **emulated**, not rejected. With `csub on` the call routes through your subscription like any other `-p` invocation — no "will bill against API" warning — and the shim emits a Claude-compatible NDJSON (newline-delimited JSON) event stream on stdout. The PTY session is still plain text internally; the streaming events are synthesized around it.
+
+```bash
+claude -p --output-format stream-json "reply with the single word OK"
+# {"type":"heartbeat"}
+# {"type":"assistant","message":{"content":[{"type":"text","text":"OK"}]}}
+# {"type":"result","result":"OK"}
+```
+
+Events emitted:
+
+- **`heartbeat`** — `{"type":"heartbeat"}`, written **during** the run at most once every ~10s, and only when the PTY produced new output since the previous interval. It is a genuine proof-of-life: when the interactive session stalls, the stream goes quiet, so a watcher can tell "still working" from "wedged." Nothing acts on the heartbeat automatically — it is purely observational.
+- **`assistant`** — `{"type":"assistant","message":{"content":[{"type":"text","text":"…"}]}}`, written once at the end, carrying the full clean reply.
+- **`result`** — `{"type":"result","result":"…"}`, the terminal event carrying the same clean, sentinel-stripped text the plain-text path produces.
+
+These shapes satisfy the `jq` filters a stream-json consumer (e.g. `ralph.sh`) uses: `.type=="assistant" | .message.content[] | select(.type=="text").text` for live text and `.type=="result" | .result` for the outcome. This makes `claude-sub` a drop-in for tools that pipe `--output-format stream-json` through `jq`.
+
+Only `stream-json` is supported. Other `--output-format` values (e.g. `json`) still exit non-zero with a message; on timeout/idle failure the shim writes a diagnostic to stderr and exits non-zero, as in plain mode.
+
+## Running under a sandbox (srt)
+
+`claude-sub` is designed to run inside Anthropic's [sandbox-runtime](https://github.com/anthropic-experimental/sandbox-runtime) (`srt`) — e.g. when `ralph.sh` wraps each iteration's `claude` call. Because the shim drives interactive Claude through a **pseudo-terminal**, the sandbox must grant pty access. The default sandbox profile denies `/dev/ptmx` and pty slave devices, so `node-pty` fails with `posix_spawnp failed` / `PTY error`.
+
+Add **`allowPty: true`** to your `srt` settings file (alongside `filesystem` and `network`):
+
+```json
+{
+  "allowPty": true,
+  "filesystem": { "...": "..." },
+  "network": { "allowedDomains": ["*.anthropic.com", "anthropic.com"], "...": "..." }
+}
+```
+
+The sandbox also needs write access to wherever interactive Claude persists session state — typically `~/.claude` and `~/.claude.json` — plus the usual temp directories. With those granted and `allowPty: true`, the shim's pty session spawns under the sandbox and stream-json routes on-plan (no API-bypass warning).
 
 ## Known limitations
 
 The following flags and features are **not supported** when routing is on:
 
-- `--output-format` (JSON, streaming JSON) — PTY output is plain text only
+- `--output-format json` — only `stream-json` is emulated (see [Streaming JSON output](#streaming-json-output)); the single-shot JSON format is not
 - `--resume` — session resume requires API session IDs not available under a PTY
 - `--json` — equivalent to `--output-format json`, not supported
 - `--no-markdown` — not forwarded; output formatting follows interactive Claude defaults

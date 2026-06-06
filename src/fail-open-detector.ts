@@ -1,3 +1,5 @@
+import { parseOutputMode } from "./output-mode-parser.js";
+
 export type FailOpenResult =
   | { bypass: false }
   | { bypass: true; reason: string };
@@ -21,8 +23,14 @@ const FAIL_OPEN_FLAGS = new Set([
 ]);
 
 export function detectFailOpen(argv: string[]): FailOpenResult {
-  for (const arg of argv) {
+  const outputMode = parseOutputMode(argv);
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
     const flag = arg.includes("=") ? arg.slice(0, arg.indexOf("=")) : arg;
+    if (flag === "--output-format" && outputMode.kind === "stream-json") {
+      // stream-json is emulated in-process, so it does not force a bypass.
+      continue;
+    }
     if (FAIL_OPEN_FLAGS.has(flag)) {
       return { bypass: true, reason: flag };
     }

@@ -6,6 +6,7 @@ import { runUnderPty } from "./pty-runner.js";
 import { formatDiagnostic } from "./diagnostic-formatter.js";
 import { readState } from "./state.js";
 import { resolveUsePty, incrementInterceptCount, maybeRunFailOpenBypass } from "./shim-logic.js";
+import { createOutputRenderer } from "./output-renderer.js";
 
 const args = process.argv.slice(2);
 const state = await readState();
@@ -28,16 +29,21 @@ if (usePlan && hasPrintFlag) {
     ? parseInt(process.env.CLAUDE_USE_SUB_TIMEOUT_MS, 10)
     : undefined;
 
+  const renderer = createOutputRenderer(parsed.outputMode, (chunk) =>
+    process.stdout.write(chunk)
+  );
+
   try {
     const result = await runUnderPty(parsed.prompt, parsed.passthroughArgs, {
       maxMs: timeoutMs,
+      onActivity: () => renderer.onActivity(),
     });
     if (!result.ok) {
       process.stderr.write(formatDiagnostic(result.reason, result.elapsedMs, result.rawOutput));
       process.exit(124);
     }
     await incrementInterceptCount();
-    process.stdout.write(result.reply + "\n");
+    renderer.finish(result.reply);
     process.exit(result.exitCode);
   } catch (err) {
     process.stderr.write(`claude-plan-wrapper: PTY error: ${err}\n`);

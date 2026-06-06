@@ -1,8 +1,15 @@
+import {
+  parseOutputMode,
+  resolvedOutputMode,
+  type OutputMode,
+} from "./output-mode-parser.js";
+
 export interface ParseSuccess {
   ok: true;
   prompt: string;
   passthroughArgs: string[];
   isPrintMode: boolean;
+  outputMode: OutputMode;
 }
 
 export interface ParseFailure {
@@ -41,12 +48,7 @@ const SUPPORTED_VARIADIC_FLAGS = new Set([
 ]);
 const PRINT_FLAGS = new Set(["-p", "--print"]);
 
-const UNSUPPORTED_FLAGS = [
-  "--output-format",
-  "--resume",
-  "--json",
-  "--no-markdown",
-];
+const UNSUPPORTED_FLAGS = ["--resume", "--json", "--no-markdown"];
 
 export const SUPPORTED_FLAGS_LIST = [
   "--model (-m)",
@@ -66,9 +68,24 @@ export const SUPPORTED_FLAGS_LIST = [
   "--disallowedTools/--disallowed-tools",
   "--tools",
   "--plugin-dir",
+  "--output-format stream-json",
 ];
 
 export function parseArgs(args: string[]): FlagMapResult {
+  const outputModeParse = parseOutputMode(args);
+  if (outputModeParse.kind === "missing-value") {
+    return { ok: false, error: `Flag --output-format requires a value` };
+  }
+  if (outputModeParse.kind === "unsupported") {
+    return {
+      ok: false,
+      error:
+        `Flag "--output-format" only supports stream-json in plan mode.\n` +
+        `Supported flags: ${SUPPORTED_FLAGS_LIST.join(", ")}`,
+    };
+  }
+  const outputMode = resolvedOutputMode(outputModeParse);
+
   let prompt: string | undefined;
   const passthroughArgs: string[] = [];
   let isPrintMode = false;
@@ -87,6 +104,13 @@ export function parseArgs(args: string[]): FlagMapResult {
           `Flag "${unsupported}" is not supported in plan mode.\n` +
           `Supported flags: ${SUPPORTED_FLAGS_LIST.join(", ")}`,
       };
+    }
+
+    if (arg === "--output-format" || arg.startsWith("--output-format=")) {
+      // Value already validated by parseOutputMode above; here we only skip the
+      // flag (and its value, in the space form) so it isn't forwarded to claude.
+      i += arg.includes("=") ? 1 : 2;
+      continue;
     }
 
     if (PRINT_FLAGS.has(arg)) {
@@ -153,5 +177,5 @@ export function parseArgs(args: string[]): FlagMapResult {
     };
   }
 
-  return { ok: true, prompt, passthroughArgs, isPrintMode };
+  return { ok: true, prompt, passthroughArgs, isPrintMode, outputMode };
 }

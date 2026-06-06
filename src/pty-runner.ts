@@ -34,6 +34,10 @@ export interface PtyRunOptions {
   maxMs?: number;
   /** Idle timeout: max ms of no output after session established. Default 30000ms. Exit code 124. */
   idleTimeoutMs?: number;
+  /** Minimum interval between activity notifications. Default 10000ms. */
+  heartbeatIntervalMs?: number;
+  /** Called when PTY output has been active during a heartbeat interval. */
+  onActivity?: () => void;
   /** Inject a custom PTY spawner (used in tests to avoid spawning real processes). */
   spawner?: PtySpawner;
   /** Session id to pin (so we know the transcript path). Default: a random UUID. */
@@ -62,6 +66,8 @@ export async function runUnderPty(
     settleMs = 5000,
     maxMs = 300000,
     idleTimeoutMs = 30000,
+    heartbeatIntervalMs = 10000,
+    onActivity,
     spawner,
     sessionId = randomUUID(),
     pollIntervalMs = 250,
@@ -84,9 +90,11 @@ export async function runUnderPty(
     let rawOutput = "";
     let done = false;
     let promptSent = false;
+    let bytesSinceHeartbeat = false;
     let settleTimer: ReturnType<typeof setTimeout> | null = null;
     let idleTimer: ReturnType<typeof setTimeout> | null = null;
     let maxTimer: ReturnType<typeof setTimeout> | null = null;
+    let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
     let pollTimer: ReturnType<typeof setInterval> | null = null;
 
     // We drive the interactive TUI only to *run* the turn; the reply is read
@@ -112,6 +120,7 @@ export async function runUnderPty(
       if (settleTimer) clearTimeout(settleTimer);
       if (idleTimer) clearTimeout(idleTimer);
       if (maxTimer) clearTimeout(maxTimer);
+      if (heartbeatTimer) clearInterval(heartbeatTimer);
       if (pollTimer) clearInterval(pollTimer);
     };
 
@@ -164,10 +173,16 @@ export async function runUnderPty(
     };
 
     maxTimer = setTimeout(() => finishFail("overall"), maxMs);
+    heartbeatTimer = setInterval(() => {
+      if (!bytesSinceHeartbeat || done) return;
+      bytesSinceHeartbeat = false;
+      try { onActivity?.(); } catch {}
+    }, heartbeatIntervalMs);
 
     ptyProcess.onData((data: string) => {
       rawOutput += data;
       if (promptSent && !done) {
+        bytesSinceHeartbeat = true;
         resetSettle();
         resetIdle();
       }

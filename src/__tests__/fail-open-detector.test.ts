@@ -3,7 +3,6 @@ import { detectFailOpen } from "../fail-open-detector.js";
 
 describe("detectFailOpen", () => {
   it.each([
-    "--output-format",
     "--input-format",
     "--include-partial-messages",
     "--include-hook-events",
@@ -22,6 +21,19 @@ describe("detectFailOpen", () => {
     expect(detectFailOpen(["-p", "hi", flag, "value"])).toEqual({
       bypass: true,
       reason: flag,
+    });
+  });
+
+  it("does not bypass --output-format stream-json", () => {
+    expect(detectFailOpen(["-p", "hi", "--output-format", "stream-json"])).toEqual({
+      bypass: false,
+    });
+  });
+
+  it("still bypasses other --output-format values", () => {
+    expect(detectFailOpen(["-p", "hi", "--output-format", "json"])).toEqual({
+      bypass: true,
+      reason: "--output-format",
     });
   });
 
@@ -48,9 +60,9 @@ describe("detectFailOpen", () => {
   });
 
   it("detects --flag=value forms", () => {
-    expect(detectFailOpen(["-p", "hi", "--output-format=stream-json"])).toEqual({
+    expect(detectFailOpen(["-p", "hi", "--input-format=stream-json"])).toEqual({
       bypass: true,
-      reason: "--output-format",
+      reason: "--input-format",
     });
   });
 });
