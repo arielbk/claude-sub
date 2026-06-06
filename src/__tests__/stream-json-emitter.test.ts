@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { emitStreamJsonResult } from "../stream-json-emitter.js";
+import { emitStreamJsonHeartbeat, emitStreamJsonResult } from "../stream-json-emitter.js";
 
 function parseNdjson(output: string): unknown[] {
   return output
@@ -24,5 +24,11 @@ describe("emitStreamJsonResult", () => {
         result: "OK",
       },
     ]);
+  });
+});
+
+describe("emitStreamJsonHeartbeat", () => {
+  it("emits a parseable heartbeat event", () => {
+    expect(JSON.parse(emitStreamJsonHeartbeat())).toEqual({ type: "heartbeat" });
   });
 });

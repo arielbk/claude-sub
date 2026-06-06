@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import { runUnderPty, IMinimalPty, PtySpawner } from "../pty-runner.js";
 import { formatDiagnostic } from "../diagnostic-formatter.js";
 
@@ -31,6 +31,50 @@ class FakePty implements IMinimalPty {
 function makeSpawner(fake: FakePty): PtySpawner {
   return () => fake;
 }
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+describe("runUnderPty — activity heartbeat", () => {
+  it("calls the activity callback at most once per interval and only after new bytes arrive", async () => {
+    vi.useFakeTimers();
+    const fake = new FakePty();
+    const onActivity = vi.fn();
+
+    const resultPromise = runUnderPty("hello", [], {
+      initialDelayMs: 0,
+      idleTimeoutMs: 100_000,
+      maxMs: 100_000,
+      settleMs: 100_000,
+      heartbeatIntervalMs: 10_000,
+      onActivity,
+      spawner: makeSpawner(fake),
+    });
+
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(onActivity).not.toHaveBeenCalled();
+
+    fake.emit("first bytes");
+    await vi.advanceTimersByTimeAsync(9_999);
+    expect(onActivity).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(onActivity).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(onActivity).toHaveBeenCalledTimes(1);
+
+    fake.emit("second");
+    fake.emit("third");
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(onActivity).toHaveBeenCalledTimes(2);
+
+    fake.exit(0);
+    await expect(resultPromise).resolves.toMatchObject({ ok: true });
+  });
+});
 
 describe("runUnderPty — overall timeout", () => {
   it(

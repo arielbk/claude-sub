@@ -10,7 +10,18 @@ export interface StreamJsonResultEvent {
   result: string;
 }
 
-export type StreamJsonEvent = StreamJsonAssistantEvent | StreamJsonResultEvent;
+export interface StreamJsonHeartbeatEvent {
+  type: "heartbeat";
+}
+
+export type StreamJsonEvent =
+  | StreamJsonAssistantEvent
+  | StreamJsonResultEvent
+  | StreamJsonHeartbeatEvent;
+
+export function emitStreamJsonHeartbeat(): string {
+  return `${JSON.stringify({ type: "heartbeat" } satisfies StreamJsonHeartbeatEvent)}\n`;
+}
 
 export function emitStreamJsonResult(reply: string): string {
   const events: StreamJsonEvent[] = [

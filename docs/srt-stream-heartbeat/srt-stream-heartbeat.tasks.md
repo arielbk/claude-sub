@@ -21,7 +21,7 @@ plan instead of the API.
 
 ### `activity-heartbeat` — Activity-gated heartbeat events during the run
 
-**Status:** not-started
+**Status:** done
 
 **Outside-in:** A long-running `claude -p --output-format stream-json` invocation emits heartbeat events on the stream while the model is producing output, and goes quiet when the PTY genuinely stalls.
 

@@ -2,6 +2,22 @@
 
 ---
 
+## [activity-heartbeat] 2026-06-06
+
+**Status:** done
+
+**What was implemented:**
+- Added activity heartbeat options to `runUnderPty`: a configurable interval and callback that fires only when new PTY bytes arrived since the prior interval
+- Wired stream-json plan-mode runs to emit parseable `{"type":"heartbeat"}` NDJSON events while the PTY is active, before the final assistant/result events
+- Added focused tests for the activity-gated runner behavior and heartbeat event formatting
+
+**Feedback loop result:** `pnpm build` clean; `pnpm test` clean — 162 passing tests, 2 existing E2E-gated tests skipped.
+
+**Notes:**
+- The real long-running `claude -p --output-format stream-json` manual watch was not run in this AFK iteration; the runner unit test uses an injected PTY and fake timers to verify the activity-gated timing behavior.
+
+---
+
 ## [stream-json-output] 2026-06-06
 
 **Status:** done

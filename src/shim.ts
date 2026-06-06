@@ -6,7 +6,7 @@ import { runUnderPty } from "./pty-runner.js";
 import { formatDiagnostic } from "./diagnostic-formatter.js";
 import { readState } from "./state.js";
 import { resolveUsePty, incrementInterceptCount, maybeRunFailOpenBypass } from "./shim-logic.js";
-import { emitStreamJsonResult } from "./stream-json-emitter.js";
+import { emitStreamJsonHeartbeat, emitStreamJsonResult } from "./stream-json-emitter.js";
 
 const args = process.argv.slice(2);
 const state = await readState();
@@ -32,6 +32,9 @@ if (usePlan && hasPrintFlag) {
   try {
     const result = await runUnderPty(parsed.prompt, parsed.passthroughArgs, {
       maxMs: timeoutMs,
+      onActivity: parsed.outputFormat === "stream-json"
+        ? () => process.stdout.write(emitStreamJsonHeartbeat())
+        : undefined,
     });
     if (!result.ok) {
       process.stderr.write(formatDiagnostic(result.reason, result.elapsedMs, result.rawOutput));
