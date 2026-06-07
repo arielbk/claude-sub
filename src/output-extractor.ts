@@ -4,9 +4,12 @@ export const SENTINEL_SYSTEM_PROMPT =
   `When you have finished your complete reply, output the following token ` +
   `on its own line with nothing else on that line: ${SENTINEL}`;
 
-// Matches ANSI/VT escape sequences: CSI, OSC, and two-char escapes
+// Matches ANSI/VT escape sequences: CSI (full param/intermediate/final byte
+// ranges — covers kitty-keyboard `\x1b[<u`/`\x1b[>1u`, colon SGR, bracketed
+// paste `\x1b[200~`), OSC, charset designation, and two-char escapes
+// (including DEC privates like ESC 7 / ESC 8).
 const ANSI_RE =
-  /\x1b(?:\[[0-9;?]*[A-Za-z]|\][^\x07]*(?:\x07|\x1b\\)|[()][A-B0-9]|[A-Za-z])/g;
+  /\x1b(?:\[[0-9:;<=>?]*[ -/]*[@-~]|\][^\x07]*(?:\x07|\x1b\\)|[()][A-B0-9]|[A-Za-z0-9=<>~])/g;
 
 export function stripAnsi(raw: string): string {
   return raw.replace(ANSI_RE, "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");

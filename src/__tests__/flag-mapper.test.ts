@@ -30,6 +30,43 @@ describe("parseArgs — prompt extraction", () => {
     const result = parseArgs([]);
     expect(result.ok).toBe(false);
   });
+
+  it("extracts the positional as the prompt when a flag follows -p", () => {
+    const result = parseArgs([
+      "-p",
+      "--output-format",
+      "stream-json",
+      "question",
+    ]);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.prompt).toBe("question");
+    expect(result.isPrintMode).toBe(true);
+    expect(result.outputMode).toBe("stream-json");
+  });
+
+  it("extracts the positional as the prompt when an =-form flag follows -p", () => {
+    const result = parseArgs(["-p", "--output-format=stream-json", "question"]);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.prompt).toBe("question");
+    expect(result.isPrintMode).toBe(true);
+    expect(result.outputMode).toBe("stream-json");
+  });
+
+  it("errors when -p is followed only by flags and no positional", () => {
+    const result = parseArgs(["-p", "--output-format", "stream-json"]);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toContain("No prompt provided");
+  });
+
+  it("errors when -p is the last argument", () => {
+    const result = parseArgs(["-p"]);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toContain("No prompt provided");
+  });
 });
 
 describe("parseArgs — supported flags", () => {
@@ -199,6 +236,21 @@ describe("parseArgs — supported flags", () => {
     expect(result.outputMode).toBe("stream-json");
   });
 
+  it("accepts --output-format json and records json mode without forwarding it", () => {
+    const result = parseArgs(["-p", "hi", "--output-format", "json"]);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.outputMode).toBe("json");
+    expect(result.passthroughArgs).toEqual([]);
+  });
+
+  it("accepts --output-format=json and records json mode", () => {
+    const result = parseArgs(["-p", "hi", "--output-format=json"]);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.outputMode).toBe("json");
+  });
+
   it("defaults outputMode to plain when --output-format is absent", () => {
     const result = parseArgs(["-p", "hi"]);
     expect(result.ok).toBe(true);
@@ -208,15 +260,15 @@ describe("parseArgs — supported flags", () => {
 });
 
 describe("parseArgs — unsupported flags", () => {
-  it("rejects --output-format values other than stream-json with error naming the flag", () => {
-    const result = parseArgs(["-p", "hi", "--output-format", "json"]);
+  it("rejects --output-format values other than stream-json or json with error naming the flag", () => {
+    const result = parseArgs(["-p", "hi", "--output-format", "text"]);
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error).toContain("--output-format");
   });
 
-  it("error message lists supported flags", () => {
-    const result = parseArgs(["-p", "hi", "--output-format", "json"]);
+  it("error message lists supported flags including both json and stream-json", () => {
+    const result = parseArgs(["-p", "hi", "--output-format", "text"]);
     expect(result.ok).toBe(false);
     if (result.ok) return;
 
@@ -239,6 +291,7 @@ describe("parseArgs — unsupported flags", () => {
       "--tools",
       "--plugin-dir",
       "--output-format stream-json",
+      "--output-format json",
     ];
 
     expect(SUPPORTED_FLAGS_LIST).toEqual(expectedSupportedFlags);
@@ -259,5 +312,19 @@ describe("parseArgs — unsupported flags", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error).toContain("--unknown-flag");
+  });
+
+  it("error messages say subscription mode, not plan mode", () => {
+    const cases = [
+      parseArgs(["-p", "hi", "--output-format", "text"]),
+      parseArgs(["-p", "hi", "--resume"]),
+      parseArgs(["-p", "hi", "--unknown-flag"]),
+    ];
+    for (const result of cases) {
+      expect(result.ok).toBe(false);
+      if (result.ok) continue;
+      expect(result.error).not.toContain("plan mode");
+      expect(result.error).toContain("subscription mode");
+    }
   });
 });

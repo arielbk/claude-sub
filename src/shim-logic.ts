@@ -50,7 +50,7 @@ export async function maybeRunFailOpenBypass(
   }
 
   deps.writeStderr(
-    `csub: ${detected.reason} is not supported under plan mode; this call will bill against API\n`
+    `csub: ${detected.reason} is not supported under subscription mode; this call will bill against API\n`
   );
   await incrementBypassCount();
 

@@ -21,13 +21,21 @@ export type PtySpawner = (
   opts: { name: string; cols: number; rows: number; cwd: string; env: Record<string, string> }
 ) => IMinimalPty;
 
+export type PtyRunFailReason = "overall" | "idle" | "no-reply";
+
 export type PtyRunResult =
   | { ok: true; rawOutput: string; reply: string; exitCode: number }
-  | { ok: false; reason: "overall" | "idle"; elapsedMs: number; rawOutput: string };
+  | { ok: false; reason: PtyRunFailReason; elapsedMs: number; rawOutput: string };
 
 export interface PtyRunOptions {
   /** Delay before sending the prompt, to let the TUI initialize. Default 2000ms. */
   initialDelayMs?: number;
+  /**
+   * Delay between writing the prompt and writing the submitting Enter.
+   * A single prompt+CR chunk trips the TUI's paste detection: the CR is taken
+   * as pasted content and the turn never submits. Default 300ms.
+   */
+  submitDelayMs?: number;
   /** How long to wait with no new output before considering the response done. Default 5000ms. */
   settleMs?: number;
   /** Hard timeout for the whole interaction. Default 300000ms (5 min). Exit code 124 on expiry. */
@@ -71,6 +79,7 @@ export async function runUnderPty(
 ): Promise<PtyRunResult> {
   const {
     initialDelayMs = 2000,
+    submitDelayMs = 300,
     settleMs = 5000,
     maxMs = 300000,
     idleTimeoutMs = 30000,
@@ -100,6 +109,7 @@ export async function runUnderPty(
     let promptSent = false;
     let bytesSinceHeartbeat = false;
     let settleTimer: ReturnType<typeof setTimeout> | null = null;
+    let submitTimer: ReturnType<typeof setTimeout> | null = null;
     let idleTimer: ReturnType<typeof setTimeout> | null = null;
     let maxTimer: ReturnType<typeof setTimeout> | null = null;
     let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
@@ -126,30 +136,42 @@ export async function runUnderPty(
 
     const cleanup = () => {
       if (settleTimer) clearTimeout(settleTimer);
+      if (submitTimer) clearTimeout(submitTimer);
       if (idleTimer) clearTimeout(idleTimer);
       if (maxTimer) clearTimeout(maxTimer);
       if (heartbeatTimer) clearInterval(heartbeatTimer);
       if (pollTimer) clearInterval(pollTimer);
     };
 
-    /** Best-effort reply: transcript first, falling back to the raw buffer. */
-    const resolveReply = (): string => {
+    /**
+     * Reply resolution: transcript first, then the sentinel-delimited raw
+     * buffer. A sentinel-less raw buffer is NOT a reply — it is the TUI screen
+     * dump of a turn that never completed (or never submitted), and returning
+     * it would silently hand the caller garbage with exit 0.
+     */
+    const resolveReply = (): { reply: string; trusted: boolean } => {
       const jsonl = readTranscript();
       if (jsonl !== null) {
         const fromTranscript = extractReplyFromTranscript(jsonl);
-        if (fromTranscript.reply) return fromTranscript.reply;
+        if (fromTranscript.reply) return { reply: fromTranscript.reply, trusted: true };
       }
-      return extractReply(rawOutput).reply;
+      const fromRaw = extractReply(rawOutput);
+      return { reply: fromRaw.reply, trusted: fromRaw.found };
     };
 
     const finishOk = (exitCode: number) => {
       if (done) return;
       done = true;
       cleanup();
-      resolve({ ok: true, rawOutput, reply: resolveReply(), exitCode });
+      const { reply, trusted } = resolveReply();
+      if (!trusted) {
+        resolve({ ok: false, reason: "no-reply", elapsedMs: Date.now() - startTime, rawOutput });
+        return;
+      }
+      resolve({ ok: true, rawOutput, reply, exitCode });
     };
 
-    const finishFail = (reason: "overall" | "idle") => {
+    const finishFail = (reason: PtyRunFailReason) => {
       if (done) return;
       done = true;
       cleanup();
@@ -162,10 +184,14 @@ export async function runUnderPty(
       if (done) return;
       done = true;
       cleanup();
-      const reply = resolveReply();
+      const { reply, trusted } = resolveReply();
       try { ptyProcess.write("\x03"); } catch {}
       setTimeout(() => {
         try { ptyProcess.kill(); } catch {}
+        if (!trusted) {
+          resolve({ ok: false, reason: "no-reply", elapsedMs: Date.now() - startTime, rawOutput });
+          return;
+        }
         resolve({ ok: true, rawOutput, reply, exitCode });
       }, 500);
     };
@@ -203,8 +229,15 @@ export async function runUnderPty(
     setTimeout(() => {
       if (done) return;
       promptSent = true;
-      // 2.1.x's Ink input submits on carriage return (Enter), not line feed.
-      ptyProcess.write(prompt + "\r");
+      // 2.1.x's Ink input submits on carriage return (Enter), not line feed —
+      // and the CR must be a separate write: a multi-char chunk is treated as
+      // a paste, so a trailing CR inside it becomes pasted content and the
+      // turn never submits.
+      ptyProcess.write(prompt);
+      submitTimer = setTimeout(() => {
+        if (done) return;
+        try { ptyProcess.write("\r"); } catch {}
+      }, submitDelayMs);
       resetSettle();
       resetIdle();
       // The transcript records the final reply (with the sentinel) once the turn

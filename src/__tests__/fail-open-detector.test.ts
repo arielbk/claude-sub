@@ -30,8 +30,14 @@ describe("detectFailOpen", () => {
     });
   });
 
-  it("still bypasses other --output-format values", () => {
+  it("does not bypass --output-format json", () => {
     expect(detectFailOpen(["-p", "hi", "--output-format", "json"])).toEqual({
+      bypass: false,
+    });
+  });
+
+  it("still bypasses other --output-format values", () => {
+    expect(detectFailOpen(["-p", "hi", "--output-format", "text"])).toEqual({
       bypass: true,
       reason: "--output-format",
     });

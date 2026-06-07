@@ -69,6 +69,7 @@ export const SUPPORTED_FLAGS_LIST = [
   "--tools",
   "--plugin-dir",
   "--output-format stream-json",
+  "--output-format json",
 ];
 
 export function parseArgs(args: string[]): FlagMapResult {
@@ -80,7 +81,7 @@ export function parseArgs(args: string[]): FlagMapResult {
     return {
       ok: false,
       error:
-        `Flag "--output-format" only supports stream-json in plan mode.\n` +
+        `Flag "--output-format" only supports stream-json or json in subscription mode.\n` +
         `Supported flags: ${SUPPORTED_FLAGS_LIST.join(", ")}`,
     };
   }
@@ -101,7 +102,7 @@ export function parseArgs(args: string[]): FlagMapResult {
       return {
         ok: false,
         error:
-          `Flag "${unsupported}" is not supported in plan mode.\n` +
+          `Flag "${unsupported}" is not supported in subscription mode.\n` +
           `Supported flags: ${SUPPORTED_FLAGS_LIST.join(", ")}`,
       };
     }
@@ -116,11 +117,13 @@ export function parseArgs(args: string[]): FlagMapResult {
     if (PRINT_FLAGS.has(arg)) {
       isPrintMode = true;
       i++;
-      if (i >= args.length) {
-        return { ok: false, error: `Flag ${arg} requires a value` };
+      // The prompt may be separated from -p by other flags; only take the next
+      // argument as the prompt when it isn't itself a flag. Otherwise it is
+      // picked up later as the first positional.
+      if (prompt === undefined && i < args.length && !args[i].startsWith("-")) {
+        prompt = args[i];
+        i++;
       }
-      prompt = args[i];
-      i++;
       continue;
     }
 
@@ -157,7 +160,7 @@ export function parseArgs(args: string[]): FlagMapResult {
       return {
         ok: false,
         error:
-          `Flag "${arg}" is not supported in plan mode.\n` +
+          `Flag "${arg}" is not supported in subscription mode.\n` +
           `Supported flags: ${SUPPORTED_FLAGS_LIST.join(", ")}`,
       };
     }

@@ -127,7 +127,7 @@ describe("maybeRunFailOpenBypass (mocked real claude exec)", () => {
     const writeStderr = vi.fn();
 
     const result = await maybeRunFailOpenBypass(
-      ["-p", "prompt", "--output-format", "json"],
+      ["-p", "prompt", "--input-format", "stream-json"],
       {
         resolveRealClaude,
         spawnSync,
@@ -140,11 +140,11 @@ describe("maybeRunFailOpenBypass (mocked real claude exec)", () => {
     expect(resolveRealClaude).toHaveBeenCalledOnce();
     expect(spawnSync).toHaveBeenCalledWith(
       "/usr/local/bin/claude",
-      ["-p", "prompt", "--output-format", "json"],
+      ["-p", "prompt", "--input-format", "stream-json"],
       { stdio: "inherit", env: { CLAUDE_USE_SUB: "1" } }
     );
     expect(writeStderr).toHaveBeenCalledWith(
-      "csub: --output-format is not supported under plan mode; this call will bill against API\n"
+      "csub: --input-format is not supported under subscription mode; this call will bill against API\n"
     );
     expect(writeState).toHaveBeenCalledWith({ bypassCount: 5 });
   });
@@ -153,6 +153,7 @@ describe("maybeRunFailOpenBypass (mocked real claude exec)", () => {
     for (const args of [
       ["-p", "prompt", "--model", "sonnet"],
       ["-p", "prompt", "--output-format", "stream-json"],
+      ["-p", "prompt", "--output-format", "json"],
     ]) {
       const result = await maybeRunFailOpenBypass(args, {
         resolveRealClaude: vi.fn(),
@@ -245,6 +246,50 @@ describe("shim plan-mode branch (CLAUDE_USE_SUB=1)", () => {
     }
   });
 
+  it("json output emits one parseable result object and no fail-open warning", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "shim-json-"));
+    try {
+      const realDir = join(tmp, "bin");
+      const configHome = join(tmp, "config");
+      mkdirSync(realDir);
+      mkdirSync(join(configHome, "claude-sub"), { recursive: true });
+      writeFileSync(
+        join(configHome, "claude-sub", "state.json"),
+        JSON.stringify({ enabled: true, interceptCount: 0, bypassCount: 0 })
+      );
+      writeFileSync(
+        join(realDir, "claude"),
+        "#!/bin/sh\necho OK\necho __PLAN_MODE_DONE_7a3b9f__\n"
+      );
+      chmodSync(join(realDir, "claude"), 0o755);
+
+      const result = spawnSync(
+        "node",
+        [shimBin, "-p", "hello", "--output-format", "json"],
+        {
+          encoding: "utf8",
+          timeout: 15000,
+          env: {
+            ...process.env,
+            CLAUDE_USE_SUB: "1",
+            XDG_CONFIG_HOME: configHome,
+            PATH: `${realDir}:${process.env.PATH ?? ""}`,
+          },
+        }
+      );
+
+      expect(result.status).toBe(0);
+      expect(result.stderr).not.toContain("will bill against API");
+      const parsed = JSON.parse(result.stdout) as { type: string; result: string };
+      expect(parsed).toEqual({ type: "result", result: "OK" });
+      expect(
+        JSON.parse(readFileSync(join(configHome, "claude-sub", "state.json"), "utf8"))
+      ).toMatchObject({ bypassCount: 0, interceptCount: 1 });
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
   it("fail-open flag warns, increments bypassCount, and passes original argv to real claude", () => {
     const tmp = mkdtempSync(join(tmpdir(), "shim-fail-open-"));
     try {
@@ -267,7 +312,7 @@ describe("shim plan-mode branch (CLAUDE_USE_SUB=1)", () => {
 
       const result = spawnSync(
         "node",
-        [shimBin, "-p", "hello", "--output-format", "json"],
+        [shimBin, "-p", "hello", "--input-format", "stream-json"],
         {
           encoding: "utf8",
           timeout: 15000,
@@ -282,13 +327,13 @@ describe("shim plan-mode branch (CLAUDE_USE_SUB=1)", () => {
 
       expect(result.status).toBe(13);
       expect(result.stderr).toContain(
-        "csub: --output-format is not supported under plan mode; this call will bill against API"
+        "csub: --input-format is not supported under subscription mode; this call will bill against API"
       );
       expect(JSON.parse(readFileSync(argvLog, "utf8"))).toEqual([
         "-p",
         "hello",
-        "--output-format",
-        "json",
+        "--input-format",
+        "stream-json",
       ]);
       expect(
         JSON.parse(readFileSync(join(configHome, "claude-sub", "state.json"), "utf8"))
@@ -319,6 +364,31 @@ describe("shim plan-mode branch (CLAUDE_USE_SUB=1)", () => {
       expect(result.status).not.toBe(0);
       expect(result.stderr).toContain("--unknown-flag");
       expect(result.stderr).toContain("--model");
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("parse errors use csub: prefix, not claude-plan-wrapper:", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "shim-prefix-"));
+    const configHome = join(tmp, "config");
+    mkdirSync(join(configHome, "claude-sub"), { recursive: true });
+    writeFileSync(
+      join(configHome, "claude-sub", "state.json"),
+      JSON.stringify({ enabled: true, interceptCount: 0, bypassCount: 0 })
+    );
+    const result = spawnSync(
+      "node",
+      [shimBin, "-p", "hello", "--unknown-flag"],
+      {
+        encoding: "utf8",
+        timeout: 15000,
+        env: { ...process.env, CLAUDE_USE_SUB: "1", XDG_CONFIG_HOME: configHome },
+      }
+    );
+    try {
+      expect(result.stderr).toContain("csub:");
+      expect(result.stderr).not.toContain("claude-plan-wrapper:");
     } finally {
       rmSync(tmp, { recursive: true, force: true });
     }
