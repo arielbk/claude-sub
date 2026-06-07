@@ -15,7 +15,17 @@ describe("publish-prep", () => {
     if (existsSync(TARBALL_PATH)) {
       execSync(`rm -f ${TARBALL_NAME}`, { cwd: PROJECT_ROOT });
     }
-    execSync("pnpm pack", { cwd: PROJECT_ROOT, stdio: "pipe" });
+    // This suite also runs nested inside `pnpm publish` (via prepublishOnly),
+    // which leaks npm_config_* into the child env: pack_destination would
+    // redirect the tarball to publish's temp dir, and dry_run (from
+    // `publish --dry-run`) would suppress writing it entirely. Pin the
+    // destination and strip dry_run so the suite always gets a real local
+    // tarball to inspect.
+    execSync(`pnpm pack --pack-destination "${PROJECT_ROOT}"`, {
+      cwd: PROJECT_ROOT,
+      stdio: "pipe",
+      env: { ...process.env, npm_config_dry_run: "" },
+    });
   });
 
   afterAll(() => {
