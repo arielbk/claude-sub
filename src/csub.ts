@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { cmdOn, cmdOff, cmdStatus, cmdDoctor, cmdInstallSandbox, cmdSetup, cmdUninstall } from "./cli.js";
+import { cmdOn, cmdOff, cmdStatus, cmdDoctor, cmdInstallSandbox, cmdSetup, cmdUninstall, cmdVersion } from "./cli.js";
 
 const [, , cmd, ...rest] = process.argv;
 
@@ -40,8 +40,10 @@ if (cmd === "install-sandbox") {
     result = await cmdStatus();
   } else if (cmd === "doctor") {
     result = await cmdDoctor();
+  } else if (cmd === "version" || cmd === "--version" || cmd === "-v") {
+    result = await cmdVersion();
   } else {
-    process.stderr.write(`csub: unknown command: ${cmd ?? "(none)"}\nUsage: csub on|off|status|doctor|setup [--non-interactive]|uninstall [--non-interactive]|install-sandbox <name>\n`);
+    process.stderr.write(`csub: unknown command: ${cmd ?? "(none)"}\nUsage: csub on|off|status|doctor|version|setup [--non-interactive]|uninstall [--non-interactive]|install-sandbox <name>\n`);
     process.exit(1);
   }
 }

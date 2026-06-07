@@ -20,7 +20,7 @@ vi.mock("../uninstall.js", () => ({
 import { writeState, readState, stateFilePath } from "../state.js";
 import { runDoctor } from "../doctor.js";
 import { uninstall } from "../uninstall.js";
-import { cmdOn, cmdOff, cmdStatus, cmdUninstall } from "../cli.js";
+import { cmdOn, cmdOff, cmdStatus, cmdUninstall, cmdVersion } from "../cli.js";
 
 beforeEach(() => {
   vi.resetAllMocks();
@@ -136,5 +136,19 @@ describe("cmdUninstall", () => {
     const result = await cmdUninstall();
 
     expect(result).toEqual({ exitCode: 0, output: "Global claude-sub package uninstalled." });
+  });
+});
+
+describe("cmdVersion", () => {
+  it("reports the package version with exit code 0", async () => {
+    const { readFile } = await import("node:fs/promises");
+    const pkg = JSON.parse(
+      await readFile(new URL("../../package.json", import.meta.url), "utf8")
+    );
+
+    const result = await cmdVersion();
+
+    expect(result.exitCode).toBe(0);
+    expect(result.output).toBe(`csub ${pkg.version}`);
   });
 });

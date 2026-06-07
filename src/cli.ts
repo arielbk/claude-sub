@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { readState, writeState, stateFilePath } from "./state.js";
 import { runDoctor } from "./doctor.js";
 import { installSandbox } from "./install-sandbox.js";
@@ -43,6 +44,14 @@ export async function cmdDoctor(): Promise<CommandResult> {
     exitCode: result.ok ? 0 : 1,
     output: lines.join("\n"),
   };
+}
+
+export async function cmdVersion(): Promise<CommandResult> {
+  // Works from both src/ (tests) and dist/ (published) — package.json sits one level up.
+  const pkg = JSON.parse(
+    await readFile(new URL("../package.json", import.meta.url), "utf8")
+  ) as { version: string };
+  return { exitCode: 0, output: `csub ${pkg.version}` };
 }
 
 export async function cmdInstallSandbox(name: string): Promise<CommandResult> {

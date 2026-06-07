@@ -36,6 +36,7 @@ This strips the marker line from your rc file and uninstalls the global package.
 csub on        # route `claude -p` through your subscription
 csub off       # passthrough only; `claude -p` hits the API again
 csub status    # show whether routing is on or off, and which `claude` PATH wins
+csub --version # print the installed version (also: csub version, csub -v)
 ```
 
 Once `csub on` is set, just use `claude` as you normally would:
