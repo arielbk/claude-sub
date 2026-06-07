@@ -98,6 +98,26 @@ describe("planSetup", () => {
     expect(plan.diff).toContain("already contains # claude-sub setup");
   });
 
+  it("plans a replacement when the marker line points at a different bin dir", async () => {
+    const homeDir = await tempHome();
+    await writeFile(
+      join(homeDir, ".zshrc"),
+      'export PATH="/old/npx-cache/bin:$PATH" # claude-sub setup\n',
+      "utf8"
+    );
+
+    const plan = await planSetup({
+      env: { SHELL: "/bin/zsh" },
+      homeDir,
+      binDir: "/new/global/bin",
+    });
+
+    expect(plan.alreadyPresent).toBe(false);
+    expect(plan.action).toBe("replace");
+    expect(plan.diff).toContain('-export PATH="/old/npx-cache/bin:$PATH" # claude-sub setup');
+    expect(plan.diff).toContain('+export PATH="/new/global/bin:$PATH" # claude-sub setup');
+  });
+
   it("uses fish syntax for fish config", async () => {
     expect(pathLineForShell("fish", "/pkg/bin")).toBe(
       "fish_add_path --prepend '/pkg/bin' # claude-sub setup"
@@ -160,6 +180,69 @@ describe("setup", () => {
     await expect(readFile(rcFile, "utf8")).resolves.toBe(
       'export PATH="/pkg/bin:$PATH" # claude-sub setup\n'
     );
+  });
+
+  it("replaces a stale marker line instead of leaving it pointing at the old bin dir", async () => {
+    const homeDir = await tempHome();
+    const rcFile = join(homeDir, ".zshrc");
+    await writeFile(
+      rcFile,
+      'alias ll=\'ls -la\'\nexport PATH="/old/npx-cache/bin:$PATH" # claude-sub setup\n',
+      "utf8"
+    );
+
+    const result = await setup({
+      env: { SHELL: "/bin/zsh" },
+      homeDir,
+      binDir: "/new/global/bin",
+      nonInteractive: true,
+    });
+
+    expect(result.wrote).toBe(true);
+    expect(result.output).toContain("PATH entry updated.");
+    await expect(readFile(rcFile, "utf8")).resolves.toBe(
+      'alias ll=\'ls -la\'\nexport PATH="/new/global/bin:$PATH" # claude-sub setup\n'
+    );
+  });
+
+  it("collapses duplicate stale marker lines into a single fresh one", async () => {
+    const homeDir = await tempHome();
+    const rcFile = join(homeDir, ".zshrc");
+    await writeFile(
+      rcFile,
+      'export PATH="/old-a/bin:$PATH" # claude-sub setup\nexport PATH="/old-b/bin:$PATH" # claude-sub setup\n',
+      "utf8"
+    );
+
+    const result = await setup({
+      env: { SHELL: "/bin/zsh" },
+      homeDir,
+      binDir: "/new/bin",
+      nonInteractive: true,
+    });
+
+    expect(result.wrote).toBe(true);
+    await expect(readFile(rcFile, "utf8")).resolves.toBe(
+      'export PATH="/new/bin:$PATH" # claude-sub setup\n'
+    );
+  });
+
+  it("does not modify the rc file when a stale replacement is declined", async () => {
+    const homeDir = await tempHome();
+    const rcFile = join(homeDir, ".zshrc");
+    const original = 'export PATH="/old/bin:$PATH" # claude-sub setup\n';
+    await writeFile(rcFile, original, "utf8");
+
+    const result = await setup({
+      env: { SHELL: "/bin/zsh" },
+      homeDir,
+      binDir: "/new/bin",
+      confirm: async () => false,
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.wrote).toBe(false);
+    await expect(readFile(rcFile, "utf8")).resolves.toBe(original);
   });
 
   it("returns exit 0 when the rc line is written even if doctor flags the current shell", async () => {

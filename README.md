@@ -14,6 +14,14 @@ npx claude-sub setup
 
 `setup` detects your shell (`zsh` / `bash` / `fish`), shows you the one-line `PATH` edit it plans to make, asks for confirmation, writes the line with a marker comment so `uninstall` can reverse it, and verifies that `which claude` resolves to the shim. The shim ships disabled — your existing `claude` calls keep working until you run `csub on`.
 
+To update later:
+
+```bash
+npx claude-sub@latest setup
+```
+
+The `@latest` matters: plain `npx claude-sub` reuses npx's cached copy without checking the registry. `setup` is idempotent — when the marker line already points at the new install it makes no changes, and when it points at an old location (e.g. a previous npx cache dir) it shows a diff and repoints it in place.
+
 To remove it later:
 
 ```bash

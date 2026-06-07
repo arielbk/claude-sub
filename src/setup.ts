@@ -17,12 +17,16 @@ export interface SetupOptions {
   confirm?: (prompt: string) => Promise<boolean>;
 }
 
+export type SetupAction = "none" | "append" | "replace";
+
 export interface SetupPlan {
   shell: SupportedShell;
   rcFile: string;
   marker: string;
   line: string;
   alreadyPresent: boolean;
+  action: SetupAction;
+  staleLines: string[];
   diff: string;
 }
 
@@ -63,12 +67,32 @@ export async function planSetup(options: SetupOptions = {}): Promise<SetupPlan> 
   const binDir = options.binDir ?? defaultBinDir();
   const line = pathLineForShell(shell, binDir);
   const existing = await readOptionalFile(rcFile);
-  const alreadyPresent = existing.includes(MARKER);
-  const diff = alreadyPresent
-    ? `# ${rcFile} already contains ${MARKER}`
-    : [`--- ${rcFile}`, `+++ ${rcFile}`, "@@", `+${line}`].join("\n");
+  const markerLines = existing
+    .split(/\r?\n/)
+    .filter((candidate) => candidate.includes(MARKER));
+  const alreadyPresent = markerLines.some((candidate) => candidate.trim() === line.trim());
+  const staleLines = alreadyPresent ? [] : markerLines;
 
-  return { shell, rcFile, marker: MARKER, line, alreadyPresent, diff };
+  let action: SetupAction;
+  let diff: string;
+  if (alreadyPresent) {
+    action = "none";
+    diff = `# ${rcFile} already contains ${MARKER}`;
+  } else if (staleLines.length > 0) {
+    action = "replace";
+    diff = [
+      `--- ${rcFile}`,
+      `+++ ${rcFile}`,
+      "@@",
+      ...staleLines.map((stale) => `-${stale}`),
+      `+${line}`,
+    ].join("\n");
+  } else {
+    action = "append";
+    diff = [`--- ${rcFile}`, `+++ ${rcFile}`, "@@", `+${line}`].join("\n");
+  }
+
+  return { shell, rcFile, marker: MARKER, line, alreadyPresent, action, staleLines, diff };
 }
 
 export async function setup(options: SetupOptions = {}): Promise<SetupResult> {
@@ -78,7 +102,7 @@ export async function setup(options: SetupOptions = {}): Promise<SetupResult> {
   await writeState({ enabled: false });
 
   let wrote = false;
-  if (plan.alreadyPresent) {
+  if (plan.action === "none") {
     lines.push("PATH entry already present; no changes made.");
   } else {
     const confirmed = options.nonInteractive
@@ -90,9 +114,15 @@ export async function setup(options: SetupOptions = {}): Promise<SetupResult> {
       return { exitCode: 1, output: lines.join("\n"), wrote, plan };
     }
 
-    await appendLine(plan.rcFile, plan.line);
-    wrote = true;
-    lines.push("PATH entry written.");
+    if (plan.action === "replace") {
+      await replaceMarkerLines(plan.rcFile, plan.line);
+      wrote = true;
+      lines.push("PATH entry updated.");
+    } else {
+      await appendLine(plan.rcFile, plan.line);
+      wrote = true;
+      lines.push("PATH entry written.");
+    }
   }
 
   const diagnostic = await runDoctor();
@@ -113,6 +143,27 @@ async function promptForConfirmation(prompt: string): Promise<boolean> {
   } finally {
     rl.close();
   }
+}
+
+/**
+ * Replace every marker line with a single fresh one, in place. Keeps the
+ * first marker line's position (so updates don't reshuffle the rc file) and
+ * drops any duplicates.
+ */
+async function replaceMarkerLines(filePath: string, line: string): Promise<void> {
+  const existing = await readOptionalFile(filePath);
+  const lines = existing.split(/\r?\n/);
+  let replaced = false;
+  const next = lines
+    .map((candidate) => {
+      if (!candidate.includes(MARKER)) return candidate;
+      if (replaced) return null;
+      replaced = true;
+      return line;
+    })
+    .filter((candidate): candidate is string => candidate !== null)
+    .join("\n");
+  await writeFile(filePath, next.endsWith("\n") ? next : `${next}\n`, "utf8");
 }
 
 async function appendLine(filePath: string, line: string): Promise<void> {
