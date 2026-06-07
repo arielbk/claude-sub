@@ -34,6 +34,18 @@ describe("stripAnsi", () => {
   it("converts standalone \\r to \\n", () => {
     expect(stripAnsi("foo\rbar")).toBe("foo\nbar");
   });
+
+  it("strips kitty-keyboard and DEC private sequences (observed leaking from Claude Code v2.1.168)", () => {
+    expect(stripAnsi("\x1b7\x1b8\x1b[<u\x1b[>1u\x1b[>4;2m\x1b[>0qOK")).toBe("OK");
+  });
+
+  it("strips bracketed-paste markers", () => {
+    expect(stripAnsi("\x1b[200~pasted\x1b[201~")).toBe("pasted");
+  });
+
+  it("strips colon-parameterised SGR (true-color) sequences", () => {
+    expect(stripAnsi("\x1b[38:2:255:0:0mred\x1b[0m")).toBe("red");
+  });
 });
 
 describe("extractReply", () => {

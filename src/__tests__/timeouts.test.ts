@@ -73,7 +73,9 @@ describe("runUnderPty — activity heartbeat", () => {
     expect(onActivity).toHaveBeenCalledTimes(2);
 
     fake.exit(0);
-    await expect(resultPromise).resolves.toMatchObject({ ok: true });
+    // No transcript reply and no sentinel ever arrived — exiting now is a
+    // no-reply failure, not a silent raw-buffer success.
+    await expect(resultPromise).resolves.toMatchObject({ ok: false, reason: "no-reply" });
   });
 });
 
@@ -138,7 +140,7 @@ describe("runUnderPty — transcript-driven happy path", () => {
   );
 
   it(
-    "submits the prompt followed by a carriage return (Enter), not a line feed",
+    "submits the prompt and Enter as separate writes so paste detection cannot swallow the CR",
     async () => {
       const fake = new FakePty();
       const writes: string[] = [];
@@ -149,15 +151,92 @@ describe("runUnderPty — transcript-driven happy path", () => {
       };
       const p = runUnderPty("hello world", [], {
         initialDelayMs: 0,
-        maxMs: 80,
+        submitDelayMs: 10,
+        maxMs: 200,
         idleTimeoutMs: 30000,
         settleMs: 30000,
         spawner: makeSpawner(fake),
         readTranscript: () => null,
       });
       await p;
-      expect(writes).toContain("hello world\r");
+      expect(writes).toContain("hello world");
+      expect(writes).toContain("\r");
+      expect(writes.indexOf("\r")).toBeGreaterThan(writes.indexOf("hello world"));
+      // A single prompt+CR chunk reads as a paste to the TUI: the CR becomes
+      // pasted content and the turn never submits (the original demo failure).
+      expect(writes).not.toContain("hello world\r");
       expect(writes).not.toContain("hello world\n");
+    },
+    2000
+  );
+});
+
+describe("runUnderPty — no clean reply", () => {
+  it(
+    "fails with reason:'no-reply' when the session settles with neither a transcript reply nor a sentinel",
+    async () => {
+      const fake = new FakePty();
+      const p = runUnderPty("hello", [], {
+        initialDelayMs: 0,
+        submitDelayMs: 0,
+        settleMs: 50,
+        idleTimeoutMs: 30000,
+        maxMs: 30000,
+        spawner: makeSpawner(fake),
+        readTranscript: () => null,
+      });
+      // Only TUI chrome ever arrives — the prompt was never answered.
+      fake.emit("\x1b[2J╭── Claude Code ──╮ chrome only");
+      const result = await p;
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.reason).toBe("no-reply");
+        expect(result.rawOutput).toContain("chrome only");
+      }
+    },
+    2000
+  );
+
+  it(
+    "fails with reason:'no-reply' when the PTY exits without producing a reply",
+    async () => {
+      const fake = new FakePty();
+      const p = runUnderPty("hello", [], {
+        initialDelayMs: 0,
+        submitDelayMs: 0,
+        settleMs: 30000,
+        idleTimeoutMs: 30000,
+        maxMs: 30000,
+        spawner: makeSpawner(fake),
+        readTranscript: () => null,
+      });
+      fake.emit("some banner");
+      fake.exit(0);
+      const result = await p;
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.reason).toBe("no-reply");
+    },
+    2000
+  );
+
+  it(
+    "still succeeds via the raw-buffer fallback when the sentinel is present (no transcript)",
+    async () => {
+      const fake = new FakePty();
+      const p = runUnderPty("hello", [], {
+        initialDelayMs: 0,
+        submitDelayMs: 0,
+        settleMs: 30000,
+        idleTimeoutMs: 30000,
+        maxMs: 30000,
+        spawner: makeSpawner(fake),
+        readTranscript: () => null,
+      });
+      fake.emit(`OK\n${SENTINEL}\n`);
+      fake.exit(0);
+      const result = await p;
+      expect(result.ok).toBe(true);
+      if (result.ok) expect(result.reply).toBe("OK");
     },
     2000
   );
@@ -305,6 +384,14 @@ describe("formatDiagnostic", () => {
     const diag = formatDiagnostic("idle", 5000, "");
     expect(diag).toContain("idle");
     expect(diag).toContain("5000ms");
+  });
+
+  it("describes the no-reply failure without claiming a timeout", () => {
+    const diag = formatDiagnostic("no-reply", 1234, "chrome bytes");
+    expect(diag).toContain("csub:");
+    expect(diag).toContain("without a clean reply");
+    expect(diag).not.toContain("timed out");
+    expect(diag).toContain("chrome bytes");
   });
 
   it("truncates rawOutput to last 4KB in the raw section", () => {

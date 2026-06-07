@@ -1,5 +1,12 @@
 # Print-mode fixes — implementation log
 
+## `original-transcript-demo` (re-run) — 2026-06-07 13:55
+
+**Status:** needs-review (live evidence green; awaiting human confirm)
+**Summary:** The earlier "claude-inside-claude" diagnosis was wrong. Root cause found and fixed: `pty-runner` wrote `prompt + "\r"` as one chunk, and the TUI's paste detection treats a multi-char chunk as a paste — the trailing CR becomes pasted content and the turn never submits (deterministic for longer prompts; the short "OK" prompt slipped under the heuristic, which is why it half-passed). With no transcript ever written, the settle timer fired and `resolveReply()` returned the ANSI-stripped raw screen buffer as the "reply" with exit 0. Three fixes: (1) prompt and CR are now separate writes (`submitDelayMs`, default 300ms); (2) a sentinel-less raw buffer is no longer a reply — the run fails with new reason `no-reply`, a stderr diagnostic, and exit 1 (sentinel-in-raw-buffer and transcript paths stay trusted); (3) `stripAnsi` extended to cover kitty-keyboard/DEC sequences (`ESC 7`/`ESC 8`, CSI with `<>=:` params, bracketed paste) that leaked into the demo dump. Verified by direct node-pty experiment (joined write: transcript never created; split write: answered in 10s) and by re-running all four bug-report commands live from inside a Claude Code session: both rejections exit 1 with `csub:` subscription-mode copy, stream-json returns the real fibonacci answer, json mode emits one `jq`-parseable result object. Suite 206 → 213 tests, green. README updated for json output, both `--output-format` forms, exit codes (0/1/124), and remaining "on-plan" copy.
+**Deviations:** The fixes touch `pty-runner.ts`/`output-extractor.ts`/`diagnostic-formatter.ts`/`shim.ts` — outside the three original slices, but required to make this demo slice's outside-in criteria pass. The heartbeat test's final expectation changed from ok:true to ok:false/no-reply (exiting with neither transcript nor sentinel is now a failure by design).
+**Handoff:** `PtyRunFailReason` now includes `"no-reply"`; shim maps it to exit 1 (124 stays timeout-only). Anyone driving `runUnderPty` with a fake PTY must end runs with a sentinel or transcript to get ok:true.
+
 ## `original-transcript-demo` — 2026-06-07 12:43:28
 
 **Status:** needs-review

@@ -46,7 +46,7 @@ claude -p "reply with the single word OK"
 # OK
 ```
 
-Exit code is `0` on success, `124` if the PTY session times out.
+Exit codes: `0` on success, `1` for unsupported flags or when the session ends without a clean reply, `124` if the PTY session times out. Failures write a `csub:`-prefixed diagnostic to stderr — the shim never passes raw terminal output off as a reply.
 
 ## Supported flags
 
@@ -70,13 +70,32 @@ When routing is enabled, the following flags are forwarded to the interactive se
 | `--disallowedTools` / `--disallowed-tools` | Tool denylist (variadic) |
 | `--tools` | Tool list (variadic) |
 | `--plugin-dir` | Plugin directories (variadic) |
-| `--output-format stream-json` | Emit a Claude-compatible NDJSON event stream — consumed by the shim, not forwarded (see [Streaming JSON output](#streaming-json-output)) |
+| `--output-format stream-json` | Emit a Claude-compatible NDJSON event stream — consumed by the shim, not forwarded (see [JSON output](#json-output)) |
+| `--output-format json` | Emit a single JSON result object on completion — consumed by the shim, not forwarded (see [JSON output](#json-output)) |
 
-Any other flag causes the shim to exit non-zero with a message naming the unsupported flag and listing what's accepted.
+Flag and prompt order don't matter: `claude -p --output-format stream-json "question"` and `claude -p "question" --output-format stream-json` both send "question" as the prompt. Any other flag causes the shim to exit non-zero with a `csub:`-prefixed message naming the unsupported flag and listing what's accepted.
 
-## Streaming JSON output
+## JSON output
 
-`claude -p --output-format stream-json` is **emulated**, not rejected. With `csub on` the call routes through your subscription like any other `-p` invocation — no "will bill against API" warning — and the shim emits a Claude-compatible NDJSON (newline-delimited JSON) event stream on stdout. The PTY session is still plain text internally; the streaming events are synthesized around it.
+Both upstream JSON output formats are **emulated**, not rejected. With `csub on` the call routes through your subscription like any other `-p` invocation — no "will bill against API" warning. The PTY session is still plain text internally; the JSON shapes are synthesized around it. Both the space-separated (`--output-format json`) and equals (`--output-format=json`) forms work.
+
+### Single-object JSON (`--output-format json`)
+
+The shim stays silent during the run and prints exactly one JSON object on completion:
+
+```bash
+claude -p "reply with the single word OK" --output-format json
+# {"type":"result","result":"OK"}
+
+claude -p "reply with the single word OK" --output-format json | jq -r .result
+# OK
+```
+
+The envelope is minimal by design — no `cost_usd`, `usage`, or `session_id` fields, since the shim does not have upstream's metadata.
+
+### Streaming JSON (`--output-format stream-json`)
+
+The shim emits a Claude-compatible NDJSON (newline-delimited JSON) event stream on stdout.
 
 ```bash
 claude -p --output-format stream-json "reply with the single word OK"
@@ -93,7 +112,7 @@ Events emitted:
 
 These shapes satisfy the `jq` filters a stream-json consumer (e.g. `ralph.sh`) uses: `.type=="assistant" | .message.content[] | select(.type=="text").text` for live text and `.type=="result" | .result` for the outcome. This makes `claude-sub` a drop-in for tools that pipe `--output-format stream-json` through `jq`.
 
-Only `stream-json` is supported. Other `--output-format` values (e.g. `json`) still exit non-zero with a message; on timeout/idle failure the shim writes a diagnostic to stderr and exits non-zero, as in plain mode.
+Only `stream-json` and `json` are supported. Other `--output-format` values (e.g. `text`) exit non-zero with a message; on failure (timeout, idle, or no clean reply) the shim writes a diagnostic to stderr and exits non-zero, as in plain mode.
 
 ## Running under a sandbox (srt)
 
@@ -109,15 +128,15 @@ Add **`allowPty: true`** to your `srt` settings file (alongside `filesystem` and
 }
 ```
 
-The sandbox also needs write access to wherever interactive Claude persists session state — typically `~/.claude` and `~/.claude.json` — plus the usual temp directories. With those granted and `allowPty: true`, the shim's pty session spawns under the sandbox and stream-json routes on-plan (no API-bypass warning).
+The sandbox also needs write access to wherever interactive Claude persists session state — typically `~/.claude` and `~/.claude.json` — plus the usual temp directories. With those granted and `allowPty: true`, the shim's pty session spawns under the sandbox and stream-json routes through your subscription (no API-bypass warning).
 
 ## Known limitations
 
 The following flags and features are **not supported** when routing is on:
 
-- `--output-format json` — only `stream-json` is emulated (see [Streaming JSON output](#streaming-json-output)); the single-shot JSON format is not
+- `--output-format text` — only `stream-json` and `json` are emulated (see [JSON output](#json-output))
 - `--resume` — session resume requires API session IDs not available under a PTY
-- `--json` — equivalent to `--output-format json`, not supported
+- `--json` / `--stream-json` — these are not real upstream `claude` flags; rejected like any other unsupported flag, with the supported list (including both `--output-format` values) in the message
 - `--no-markdown` — not forwarded; output formatting follows interactive Claude defaults
 - Piped stdin — the PTY session cannot receive stdin piped from a shell pipe
 - Non-print invocations — only `-p` / `--print` routes through your subscription; everything else passes through to the real binary
