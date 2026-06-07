@@ -50,10 +50,18 @@ export interface PtyRunOptions {
   pollIntervalMs?: number;
 }
 
-/** Claude Code stores transcripts at ~/.claude/projects/<slug>/<session-id>.jsonl */
-export function transcriptPathFor(cwd: string, sessionId: string): string {
+/**
+ * Claude Code stores transcripts at <config-dir>/projects/<slug>/<session-id>.jsonl,
+ * where the config dir is $CLAUDE_CONFIG_DIR when set, ~/.claude otherwise.
+ */
+export function transcriptPathFor(
+  cwd: string,
+  sessionId: string,
+  env: NodeJS.ProcessEnv = process.env
+): string {
+  const configDir = env.CLAUDE_CONFIG_DIR || `${homedir()}/.claude`;
   const slug = cwd.replace(/[/.]/g, "-");
-  return `${homedir()}/.claude/projects/${slug}/${sessionId}.jsonl`;
+  return `${configDir}/projects/${slug}/${sessionId}.jsonl`;
 }
 
 export async function runUnderPty(
