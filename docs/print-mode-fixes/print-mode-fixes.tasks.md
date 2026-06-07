@@ -30,7 +30,7 @@ Fix the `-p` prompt-stealing bug, add `--output-format json` support, and rename
 
 ### `subscription-mode-copy` — Rename "plan mode" → "subscription mode", unify `csub:` prefix
 
-**Status:** not-started
+**Status:** done
 
 **Outside-in:** Rejection stderr reads e.g. `csub: Flag "--json" is not supported in subscription mode.` — no user-facing string says "plan mode", and every shim stderr line is prefixed `csub:` (no more `claude-plan-wrapper:` prefix).
 

@@ -313,4 +313,18 @@ describe("parseArgs — unsupported flags", () => {
     if (result.ok) return;
     expect(result.error).toContain("--unknown-flag");
   });
+
+  it("error messages say subscription mode, not plan mode", () => {
+    const cases = [
+      parseArgs(["-p", "hi", "--output-format", "text"]),
+      parseArgs(["-p", "hi", "--resume"]),
+      parseArgs(["-p", "hi", "--unknown-flag"]),
+    ];
+    for (const result of cases) {
+      expect(result.ok).toBe(false);
+      if (result.ok) continue;
+      expect(result.error).not.toContain("plan mode");
+      expect(result.error).toContain("subscription mode");
+    }
+  });
 });

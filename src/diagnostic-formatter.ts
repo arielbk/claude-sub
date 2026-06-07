@@ -10,7 +10,7 @@ export function formatDiagnostic(
   const snippet = rawOutput.slice(-SNAPSHOT_BYTES);
   const clean = stripAnsi(snippet);
   return [
-    `claude-plan-wrapper: timed out (${reason})`,
+    `csub: timed out (${reason})`,
     `elapsed: ${elapsedMs}ms`,
     ``,
     `--- raw PTY (last ${snippet.length} bytes) ---`,

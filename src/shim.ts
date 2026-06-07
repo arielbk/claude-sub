@@ -21,7 +21,7 @@ if (usePlan && hasPrintFlag) {
 
   const parsed = parseArgs(args);
   if (!parsed.ok) {
-    process.stderr.write(`claude-plan-wrapper: ${parsed.error}\n`);
+    process.stderr.write(`csub: ${parsed.error}\n`);
     process.exit(1);
   }
 
@@ -46,7 +46,7 @@ if (usePlan && hasPrintFlag) {
     renderer.finish(result.reply);
     process.exit(result.exitCode);
   } catch (err) {
-    process.stderr.write(`claude-plan-wrapper: PTY error: ${err}\n`);
+    process.stderr.write(`csub: PTY error: ${err}\n`);
     process.exit(1);
   }
 }

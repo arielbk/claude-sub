@@ -1,5 +1,12 @@
 # Print-mode fixes — implementation log
 
+## `subscription-mode-copy` — 2026-06-07 12:41:13
+
+**Status:** done
+**Summary:** Renamed all user-facing "plan mode" strings to "subscription mode" and replaced every `claude-plan-wrapper:` stderr prefix with `csub:`. Changed: `flag-mapper.ts` (3 error messages), `shim-logic.ts` (fail-open warning), `shim.ts` (parse-error and PTY-error prefixes), `diagnostic-formatter.ts` (timeout prefix). On-disk `claude-plan-wrapper` header detection in `doctor.ts` and `real-claude-resolver.ts` left untouched for backward compat. Added 2 new tests: one asserting no error message contains "plan mode", one asserting shim parse errors use `csub:` not `claude-plan-wrapper:`. Updated the existing fail-open integration test assertion to `subscription mode`. Suite grew from 204 → 206 tests.
+**Deviations:** none
+**Handoff:** The `claude-plan-wrapper` string still appears in `doctor.ts` and `real-claude-resolver.ts` as a header marker for detecting old on-disk shims — that is intentional backward compat. All user-visible stderr is now uniformly `csub:`-prefixed and says "subscription mode". The `diagnostic-formatter.ts` timeout output now says `csub: timed out (reason)` — no test currently asserts on that prefix (the timeout tests check the PTY runner, not the formatted output), but the change is consistent and the source is correct.
+
 ## `output-format-json` — 2026-06-07 12:36:50
 
 **Status:** done

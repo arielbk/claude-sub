@@ -81,7 +81,7 @@ export function parseArgs(args: string[]): FlagMapResult {
     return {
       ok: false,
       error:
-        `Flag "--output-format" only supports stream-json or json in plan mode.\n` +
+        `Flag "--output-format" only supports stream-json or json in subscription mode.\n` +
         `Supported flags: ${SUPPORTED_FLAGS_LIST.join(", ")}`,
     };
   }
@@ -102,7 +102,7 @@ export function parseArgs(args: string[]): FlagMapResult {
       return {
         ok: false,
         error:
-          `Flag "${unsupported}" is not supported in plan mode.\n` +
+          `Flag "${unsupported}" is not supported in subscription mode.\n` +
           `Supported flags: ${SUPPORTED_FLAGS_LIST.join(", ")}`,
       };
     }
@@ -160,7 +160,7 @@ export function parseArgs(args: string[]): FlagMapResult {
       return {
         ok: false,
         error:
-          `Flag "${arg}" is not supported in plan mode.\n` +
+          `Flag "${arg}" is not supported in subscription mode.\n` +
           `Supported flags: ${SUPPORTED_FLAGS_LIST.join(", ")}`,
       };
     }

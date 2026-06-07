@@ -144,7 +144,7 @@ describe("maybeRunFailOpenBypass (mocked real claude exec)", () => {
       { stdio: "inherit", env: { CLAUDE_USE_SUB: "1" } }
     );
     expect(writeStderr).toHaveBeenCalledWith(
-      "csub: --input-format is not supported under plan mode; this call will bill against API\n"
+      "csub: --input-format is not supported under subscription mode; this call will bill against API\n"
     );
     expect(writeState).toHaveBeenCalledWith({ bypassCount: 5 });
   });
@@ -327,7 +327,7 @@ describe("shim plan-mode branch (CLAUDE_USE_SUB=1)", () => {
 
       expect(result.status).toBe(13);
       expect(result.stderr).toContain(
-        "csub: --input-format is not supported under plan mode; this call will bill against API"
+        "csub: --input-format is not supported under subscription mode; this call will bill against API"
       );
       expect(JSON.parse(readFileSync(argvLog, "utf8"))).toEqual([
         "-p",
@@ -364,6 +364,31 @@ describe("shim plan-mode branch (CLAUDE_USE_SUB=1)", () => {
       expect(result.status).not.toBe(0);
       expect(result.stderr).toContain("--unknown-flag");
       expect(result.stderr).toContain("--model");
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("parse errors use csub: prefix, not claude-plan-wrapper:", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "shim-prefix-"));
+    const configHome = join(tmp, "config");
+    mkdirSync(join(configHome, "claude-sub"), { recursive: true });
+    writeFileSync(
+      join(configHome, "claude-sub", "state.json"),
+      JSON.stringify({ enabled: true, interceptCount: 0, bypassCount: 0 })
+    );
+    const result = spawnSync(
+      "node",
+      [shimBin, "-p", "hello", "--unknown-flag"],
+      {
+        encoding: "utf8",
+        timeout: 15000,
+        env: { ...process.env, CLAUDE_USE_SUB: "1", XDG_CONFIG_HOME: configHome },
+      }
+    );
+    try {
+      expect(result.stderr).toContain("csub:");
+      expect(result.stderr).not.toContain("claude-plan-wrapper:");
     } finally {
       rmSync(tmp, { recursive: true, force: true });
     }
