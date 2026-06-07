@@ -20,6 +20,22 @@ describe("createOutputRenderer — plain", () => {
   });
 });
 
+describe("createOutputRenderer — json", () => {
+  it("emits nothing on activity", () => {
+    const { write, chunks } = capture();
+    createOutputRenderer("json", write).onActivity();
+    expect(chunks).toEqual([]);
+  });
+
+  it("writes one JSON result object on finish", () => {
+    const { write, chunks } = capture();
+    createOutputRenderer("json", write).finish("the answer");
+    expect(chunks).toHaveLength(1);
+    const parsed = JSON.parse(chunks[0]);
+    expect(parsed).toEqual({ type: "result", result: "the answer" });
+  });
+});
+
 describe("createOutputRenderer — stream-json", () => {
   it("writes a heartbeat event on activity", () => {
     const { write, chunks } = capture();

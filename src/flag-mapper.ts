@@ -69,6 +69,7 @@ export const SUPPORTED_FLAGS_LIST = [
   "--tools",
   "--plugin-dir",
   "--output-format stream-json",
+  "--output-format json",
 ];
 
 export function parseArgs(args: string[]): FlagMapResult {
@@ -80,7 +81,7 @@ export function parseArgs(args: string[]): FlagMapResult {
     return {
       ok: false,
       error:
-        `Flag "--output-format" only supports stream-json in plan mode.\n` +
+        `Flag "--output-format" only supports stream-json or json in plan mode.\n` +
         `Supported flags: ${SUPPORTED_FLAGS_LIST.join(", ")}`,
     };
   }

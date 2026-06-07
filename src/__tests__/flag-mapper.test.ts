@@ -236,6 +236,21 @@ describe("parseArgs — supported flags", () => {
     expect(result.outputMode).toBe("stream-json");
   });
 
+  it("accepts --output-format json and records json mode without forwarding it", () => {
+    const result = parseArgs(["-p", "hi", "--output-format", "json"]);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.outputMode).toBe("json");
+    expect(result.passthroughArgs).toEqual([]);
+  });
+
+  it("accepts --output-format=json and records json mode", () => {
+    const result = parseArgs(["-p", "hi", "--output-format=json"]);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.outputMode).toBe("json");
+  });
+
   it("defaults outputMode to plain when --output-format is absent", () => {
     const result = parseArgs(["-p", "hi"]);
     expect(result.ok).toBe(true);
@@ -245,15 +260,15 @@ describe("parseArgs — supported flags", () => {
 });
 
 describe("parseArgs — unsupported flags", () => {
-  it("rejects --output-format values other than stream-json with error naming the flag", () => {
-    const result = parseArgs(["-p", "hi", "--output-format", "json"]);
+  it("rejects --output-format values other than stream-json or json with error naming the flag", () => {
+    const result = parseArgs(["-p", "hi", "--output-format", "text"]);
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error).toContain("--output-format");
   });
 
-  it("error message lists supported flags", () => {
-    const result = parseArgs(["-p", "hi", "--output-format", "json"]);
+  it("error message lists supported flags including both json and stream-json", () => {
+    const result = parseArgs(["-p", "hi", "--output-format", "text"]);
     expect(result.ok).toBe(false);
     if (result.ok) return;
 
@@ -276,6 +291,7 @@ describe("parseArgs — unsupported flags", () => {
       "--tools",
       "--plugin-dir",
       "--output-format stream-json",
+      "--output-format json",
     ];
 
     expect(SUPPORTED_FLAGS_LIST).toEqual(expectedSupportedFlags);

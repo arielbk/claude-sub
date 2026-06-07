@@ -18,7 +18,7 @@ Fix the `-p` prompt-stealing bug, add `--output-format json` support, and rename
 
 ### `output-format-json` — Support `--output-format json` end-to-end
 
-**Status:** not-started
+**Status:** done
 
 **Outside-in:** `claude -p "hi" --output-format json` (both `--output-format json` and `--output-format=json` forms) prints exactly one parseable JSON object `{"type":"result","result":"..."}` on completion and nothing before it; `jq -r .result` recovers the reply. Stays on the subscription path (no API-billing bypass).
 

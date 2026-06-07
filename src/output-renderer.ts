@@ -24,6 +24,12 @@ export function createOutputRenderer(
       finish: (reply) => write(emitStreamJsonResult(reply)),
     };
   }
+  if (mode === "json") {
+    return {
+      onActivity: () => {},
+      finish: (reply) => write(JSON.stringify({ type: "result", result: reply })),
+    };
+  }
   return {
     onActivity: () => {},
     finish: (reply) => write(`${reply}\n`),

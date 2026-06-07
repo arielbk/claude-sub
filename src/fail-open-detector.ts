@@ -27,8 +27,11 @@ export function detectFailOpen(argv: string[]): FailOpenResult {
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     const flag = arg.includes("=") ? arg.slice(0, arg.indexOf("=")) : arg;
-    if (flag === "--output-format" && outputMode.kind === "stream-json") {
-      // stream-json is emulated in-process, so it does not force a bypass.
+    if (
+      flag === "--output-format" &&
+      (outputMode.kind === "stream-json" || outputMode.kind === "json")
+    ) {
+      // stream-json and json are emulated in-process, so they do not force a bypass.
       continue;
     }
     if (FAIL_OPEN_FLAGS.has(flag)) {

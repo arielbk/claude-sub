@@ -18,11 +18,19 @@ describe("parseOutputMode", () => {
     });
   });
 
-  it("returns unsupported (carrying the value) for any other value", () => {
+  it("returns json for the space form", () => {
     expect(parseOutputMode(["-p", "hi", "--output-format", "json"])).toEqual({
-      kind: "unsupported",
-      value: "json",
+      kind: "json",
     });
+  });
+
+  it("returns json for the = form", () => {
+    expect(parseOutputMode(["-p", "hi", "--output-format=json"])).toEqual({
+      kind: "json",
+    });
+  });
+
+  it("returns unsupported (carrying the value) for any other value", () => {
     expect(parseOutputMode(["-p", "hi", "--output-format=text"])).toEqual({
       kind: "unsupported",
       value: "text",
@@ -37,10 +45,11 @@ describe("parseOutputMode", () => {
 });
 
 describe("resolvedOutputMode", () => {
-  it("maps stream-json to stream-json and everything else to plain", () => {
+  it("maps stream-json to stream-json, json to json, and everything else to plain", () => {
     expect(resolvedOutputMode({ kind: "stream-json" })).toBe("stream-json");
+    expect(resolvedOutputMode({ kind: "json" })).toBe("json");
     expect(resolvedOutputMode({ kind: "absent" })).toBe("plain");
-    expect(resolvedOutputMode({ kind: "unsupported", value: "json" })).toBe("plain");
+    expect(resolvedOutputMode({ kind: "unsupported", value: "text" })).toBe("plain");
     expect(resolvedOutputMode({ kind: "missing-value" })).toBe("plain");
   });
 });
