@@ -1,5 +1,12 @@
 # Print-mode fixes — implementation log
 
+## `original-transcript-demo` — 2026-06-07 12:43:28
+
+**Status:** needs-review
+**Summary:** Re-ran the four bug-report invocations against the freshly built shim (`pnpm build`, then `CLAUDE_USE_SUB=1 node dist/shim.js ...`). Rejection cases pass: `--json` and `--stream-json` both exit 1 with `csub: Flag "..." is not supported in subscription mode.` and the supported-flags list naming both output formats. Live cases half-pass: `-p --output-format stream-json "question"` sends the real question (prompt-stealing fixed — the fibonacci question is visible in the inner session, not `--output-format`), and `--output-format json` emits exactly one `jq`-parseable `{"type":"result","result":...}` object with silent stderr. However, in both live runs the extracted reply is a raw TUI screen dump (ANSI codes, banner, status line) instead of the clean answer.
+**Deviations:** Live-run reply extraction failed in this environment — suspected claude-inside-claude artifact (the demo ran from within a Claude Code session; the inner interactive claude rendered its TUI but the extractor fell back to the raw buffer before a reply was produced). Not caused by this feature's changes: the extraction path is untouched by all three slices.
+**Handoff:** Needs a human re-run of the two live cases from a plain terminal to confirm clean reply extraction. The four commands: `claude -p "q" --json` (expect csub rejection), `claude -p "q" --stream-json` (expect csub rejection), `claude -p --output-format stream-json "what are the first 20 numbers in the fibonacci sequence doubled?"`, `claude -p "same q" --output-format json | jq -r .result`.
+
 ## `subscription-mode-copy` — 2026-06-07 12:41:13
 
 **Status:** done

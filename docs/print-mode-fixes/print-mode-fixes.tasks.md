@@ -42,7 +42,7 @@ Fix the `-p` prompt-stealing bug, add `--output-format json` support, and rename
 
 ### `original-transcript-demo` — Re-run the original failing transcript
 
-**Status:** not-started
+**Status:** needs-review
 
 **Outside-in:** The three invocations from the original bug report, run live: `claude -p "..." --json` and `claude -p "..." --stream-json` are rejected with the new subscription-mode copy, `claude -p --output-format stream-json "what are the first 20 numbers in the fibonacci sequence doubled?"` returns a real fibonacci answer, and `claude -p "same question" --output-format json` yields one parseable result object.
 
