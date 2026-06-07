@@ -30,6 +30,43 @@ describe("parseArgs — prompt extraction", () => {
     const result = parseArgs([]);
     expect(result.ok).toBe(false);
   });
+
+  it("extracts the positional as the prompt when a flag follows -p", () => {
+    const result = parseArgs([
+      "-p",
+      "--output-format",
+      "stream-json",
+      "question",
+    ]);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.prompt).toBe("question");
+    expect(result.isPrintMode).toBe(true);
+    expect(result.outputMode).toBe("stream-json");
+  });
+
+  it("extracts the positional as the prompt when an =-form flag follows -p", () => {
+    const result = parseArgs(["-p", "--output-format=stream-json", "question"]);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.prompt).toBe("question");
+    expect(result.isPrintMode).toBe(true);
+    expect(result.outputMode).toBe("stream-json");
+  });
+
+  it("errors when -p is followed only by flags and no positional", () => {
+    const result = parseArgs(["-p", "--output-format", "stream-json"]);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toContain("No prompt provided");
+  });
+
+  it("errors when -p is the last argument", () => {
+    const result = parseArgs(["-p"]);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toContain("No prompt provided");
+  });
 });
 
 describe("parseArgs — supported flags", () => {

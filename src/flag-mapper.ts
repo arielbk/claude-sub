@@ -116,11 +116,13 @@ export function parseArgs(args: string[]): FlagMapResult {
     if (PRINT_FLAGS.has(arg)) {
       isPrintMode = true;
       i++;
-      if (i >= args.length) {
-        return { ok: false, error: `Flag ${arg} requires a value` };
+      // The prompt may be separated from -p by other flags; only take the next
+      // argument as the prompt when it isn't itself a flag. Otherwise it is
+      // picked up later as the first positional.
+      if (prompt === undefined && i < args.length && !args[i].startsWith("-")) {
+        prompt = args[i];
+        i++;
       }
-      prompt = args[i];
-      i++;
       continue;
     }
 
